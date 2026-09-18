@@ -18,20 +18,28 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
 
-    // Extract explicit preferences from query string
-    const queryUserId = searchParams.get('userId');
-    const queryBudget = searchParams.get('budget') ? parseFloat(searchParams.get('budget') as string) : undefined;
-    const queryLocation = searchParams.get('location') || undefined;
-    const queryBedrooms = searchParams.get('bedrooms') ? parseInt(searchParams.get('bedrooms') as string, 10) : undefined;
-    const queryFurnishing = searchParams.get('furnishing') || undefined;
-    const queryAmenities = searchParams.get('amenities') ? searchParams.get('amenities')!.split(',').map(a => a.trim()) : undefined;
-    const queryCommutePoint = searchParams.get('commutePoint') || undefined;
-    const queryOtherPreferences = searchParams.get('otherPreferences') || undefined;
+    // Extract explicit preferences from query string with boundary validation
+    const queryUserId = searchParams.get('userId')?.trim().slice(0, 100);
+    const rawBudget = searchParams.get('budget');
+    const parsedBudget = rawBudget ? parseFloat(rawBudget) : undefined;
+    const queryBudget = parsedBudget !== undefined && !isNaN(parsedBudget) && parsedBudget > 0 && parsedBudget <= 10000000 ? parsedBudget : undefined;
+
+    const rawBedrooms = searchParams.get('bedrooms');
+    const parsedBedrooms = rawBedrooms ? parseInt(rawBedrooms, 10) : undefined;
+    const queryBedrooms = parsedBedrooms !== undefined && !isNaN(parsedBedrooms) && parsedBedrooms >= 0 && parsedBedrooms <= 10 ? parsedBedrooms : undefined;
+
+    const queryLocation = searchParams.get('location')?.trim().slice(0, 100) || undefined;
+    const queryFurnishing = searchParams.get('furnishing')?.trim().slice(0, 50) || undefined;
+    const queryAmenities = searchParams.get('amenities')
+      ? searchParams.get('amenities')!.split(',').map(a => a.trim().slice(0, 50)).filter(Boolean).slice(0, 20)
+      : undefined;
+    const queryCommutePoint = searchParams.get('commutePoint')?.trim().slice(0, 100) || undefined;
+    const queryOtherPreferences = searchParams.get('otherPreferences')?.trim().slice(0, 200) || undefined;
 
     let preferences: UserPreferencesInput = {
-      budget: queryBudget && !isNaN(queryBudget) ? queryBudget : undefined,
+      budget: queryBudget,
       location: queryLocation,
-      bedrooms: queryBedrooms && !isNaN(queryBedrooms) ? queryBedrooms : undefined,
+      bedrooms: queryBedrooms,
       furnishing: queryFurnishing,
       amenities: queryAmenities,
       commutePoint: queryCommutePoint,

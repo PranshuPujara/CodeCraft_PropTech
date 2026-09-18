@@ -38,6 +38,22 @@ export async function POST(req: Request) {
       );
     }
 
+    // Numerical budget validation
+    const budgetA = Number(profileA.budget);
+    const budgetB = Number(profileB.budget);
+    if (isNaN(budgetA) || budgetA <= 0 || budgetA > 10000000) {
+      return NextResponse.json(
+        { error: 'Invalid budget in profileA: must be a positive number up to 10,000,000.' },
+        { status: 400 }
+      );
+    }
+    if (isNaN(budgetB) || budgetB <= 0 || budgetB > 10000000) {
+      return NextResponse.json(
+        { error: 'Invalid budget in profileB: must be a positive number up to 10,000,000.' },
+        { status: 400 }
+      );
+    }
+
     const userMessage = buildCompatibilityUserPrompt(profileA, profileB);
 
     let compatibilityResult: RoommateCompatibilityResponse;

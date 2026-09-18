@@ -154,7 +154,7 @@ export default function CopilotPage() {
 
   const handleSend = (textToSend?: string) => {
     const query = (textToSend || input).trim();
-    if (!query || isTyping) return;
+    if (!query || isTyping || query.length > 1000) return;
 
     const userMessage: Message = {
       id: `usr-${Date.now()}`,
@@ -295,6 +295,7 @@ export default function CopilotPage() {
       >
         <input
           type="text"
+          maxLength={1000}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask anything (e.g. 'Can I afford Indiranagar with a ₹35k budget?')..."
