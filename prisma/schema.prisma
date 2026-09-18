@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  name               String
+  budget             Float
+  preferences        String              // JSON string: { location, bedrooms, furnishing, amenities, commutePoint }
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  savedProperties    SavedProperty[]
+  agreements         Agreement[]
+  roommateProfiles   RoommateProfile[]
+  chatMessages       ChatMessage[]
+}
+
+model Property {
+  id              String           @id @default(cuid())
+  title           String
+  location        String
+  rent            Float
+  deposit         Float
+  brokerage       Float
+  furnishing      String           // e.g. "Furnished", "Semi-Furnished", "Unfurnished"
+  amenities       String           // JSON string array: ["Gym", "Security"]
+  bedrooms        Int
+  description     String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  costBreakdown   CostBreakdown?
+  savedProperties SavedProperty[]
+  agreements      Agreement[]
+}
+
+model CostBreakdown {
+  id                  String   @id @default(cuid())
+  propertyId          String   @unique
+  property            Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  maintenance         Float    @default(0)
+  electricity         Float    @default(0)
+  water               Float    @default(0)
+  internet            Float    @default(0)
+  transport           Float    @default(0)
+  otherRecurring      Float    @default(0)
+  estimatedMonthlyCost Float
+  initialMoveInCost   Float
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model SavedProperty {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId    String
+  property      Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  isShortlisted Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@unique([userId, propertyId])
+}
+
+model Agreement {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId      String?
+  property        Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  fileName        String
+  uploadedAt      DateTime  @default(now())
+  extractedFields String    // JSON string of extracted fields object
+  summary         String
+  flaggedClauses  String    // JSON string of flagged clause objects array [{ clause, reason }]
+}
+
+model RoommateProfile {
+  id                 String                @id @default(cuid())
+  userId             String
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String                @default("User")
+  budget             Float
+  sleepSchedule      String                // e.g., "Night Owl (12 AM - 8 AM)"
+  workSchedule       String                // e.g., "9 to 5 Office"
+  cleanliness        String                // e.g., "Very Neat"
+  noiseTolerance     String                // e.g., "Low"
+  guests             String                // e.g., "Occasional weekends"
+  smoking            String                // e.g., "Non-smoker"
+  foodPreferences    String                // e.g., "Vegetarian"
+  pets               String                // e.g., "Cat owner"
+  socialPreferences  String                // e.g., "Social / friendly"
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  resultsAsProfileA  CompatibilityResult[] @relation("ProfileA")
+  resultsAsProfileB  CompatibilityResult[] @relation("ProfileB")
+}
+
+model CompatibilityResult {
+  id                 String          @id @default(cuid())
+  profileAId         String
+  profileA           RoommateProfile @relation("ProfileA", fields: [profileAId], references: [id], onDelete: Cascade)
+  profileBId         String
+  profileB           RoommateProfile @relation("ProfileB", fields: [profileBId], references: [id], onDelete: Cascade)
+  commonPreferences  String          // JSON string array of common alignment points
+  potentialConflicts String          // JSON string array of potential conflict points
+  explanation        String
+  score              Float
+  createdAt          DateTime        @default(now())
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        String   // "user" | "assistant"
+  content     String
+  contextRefs String?  // JSON string array or object referencing context entities
+  createdAt   DateTime @default(now())
+}
