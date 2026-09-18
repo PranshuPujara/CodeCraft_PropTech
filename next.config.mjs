@@ -1,4 +1,7 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {};
+const nextConfig = {
+  serverComponentsExternalPackages: ['pdf-parse'],
+};
 
 export default nextConfig;
+

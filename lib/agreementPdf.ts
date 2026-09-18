@@ -1,5 +1,3 @@
-import { PDFParse } from 'pdf-parse';
-
 /**
  * Rental Agreement PDF Text Extractor — Rental Intelligence Platform
  * ARCHITECTURE.md §2 & §9 | PRODUCT.md §6.5
@@ -24,10 +22,12 @@ export async function extractTextFromPDF(
     throw new Error('PDF extraction failed: input buffer is empty or missing');
   }
 
-  let parser: PDFParse | null = null;
+  let parser: any = null;
   try {
+    const { PDFParse } = await import('pdf-parse');
     parser = new PDFParse({ data: buffer });
     const textResult = await parser.getText();
+
     const rawText = textResult?.text?.trim() || '';
 
     if (!rawText) {
