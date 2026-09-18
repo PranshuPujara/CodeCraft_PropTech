@@ -277,7 +277,7 @@ export async function generatePropertyRecommendations(
     };
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   const isMock = !apiKey || apiKey === 'your-anthropic-api-key-here' || apiKey === 'mock-api-key';
 
   if (isMock) {

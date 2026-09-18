@@ -1,12 +1,43 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
+import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 import { extractTextFromPDF } from '../../../lib/agreementPdf';
 import { completeStructuredJSON } from '../../../lib/ai/client';
 import { AGREEMENT_EXTRACTION_SYSTEM_PROMPT } from '../../../lib/ai/prompts/agreementExtract';
 import { AGREEMENT_FLAGS_SYSTEM_PROMPT } from '../../../lib/ai/prompts/agreementFlags';
-import { AgreementExtractionResponse, AgreementFlagsResponse } from '../../../lib/ai/types';
+
+const ExtractedFieldSchema = z.object({
+  value: z.union([z.string(), z.number()]).nullable(),
+  found: z.boolean(),
+  clauseSnippet: z.string().nullable().optional(),
+});
+
+const AgreementExtractionSchema = z.object({
+  rent: ExtractedFieldSchema,
+  deposit: ExtractedFieldSchema,
+  leaseDuration: ExtractedFieldSchema,
+  lockInPeriod: ExtractedFieldSchema,
+  noticePeriod: ExtractedFieldSchema,
+  rentEscalation: ExtractedFieldSchema,
+  maintenanceResponsibility: ExtractedFieldSchema,
+  utilityResponsibility: ExtractedFieldSchema,
+  penalties: ExtractedFieldSchema,
+  terminationConditions: ExtractedFieldSchema,
+  summary: z.string(),
+});
+
+const FlaggedClauseItemSchema = z.object({
+  clause: z.string(),
+  reason: z.string(),
+  attentionLevel: z.enum(['high', 'medium', 'low']),
+});
+
+const AgreementFlagsSchema = z.object({
+  flaggedClauses: z.array(FlaggedClauseItemSchema),
+  disclaimer: z.string(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -24,43 +55,73 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1. File Validation
+    if (file.type !== 'application/pdf') {
+      return NextResponse.json(
+        { error: 'Invalid file format. Only PDF is allowed.' },
+        { status: 400 }
+      );
+    }
+
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: 'File size exceeds the 5MB limit.' },
+        { status: 400 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 1. Extract text from PDF
+    // 2. Extract text from PDF
     const extractedText = await extractTextFromPDF(buffer);
 
-    // 2. Generate structured fields
-    const extractionResponse = await completeStructuredJSON<AgreementExtractionResponse>({
+    // 3. Generate structured fields
+    const extractionResponse = await completeStructuredJSON<any>({
       systemPrompt: AGREEMENT_EXTRACTION_SYSTEM_PROMPT,
       userMessage: `Please extract the required fields from this rental agreement text:\n\n${extractedText}`,
     });
 
-    // 3. Generate summary/flags
-    const flagsResponse = await completeStructuredJSON<AgreementFlagsResponse>({
+    // 4. Generate summary/flags
+    const flagsResponse = await completeStructuredJSON<any>({
       systemPrompt: AGREEMENT_FLAGS_SYSTEM_PROMPT,
       userMessage: `Please analyze this rental agreement text and flag clauses that deserve attention:\n\n${extractedText}`,
     });
 
-    // 4. Store the result
+    // 5. Runtime Validation
+    let validatedExtraction;
+    let validatedFlags;
+    try {
+      validatedExtraction = AgreementExtractionSchema.parse(extractionResponse);
+      validatedFlags = AgreementFlagsSchema.parse(flagsResponse);
+    } catch (zodError: any) {
+      console.error('Schema validation failed:', zodError);
+      return NextResponse.json(
+        { error: 'AI generated an invalid response shape.' },
+        { status: 502 }
+      );
+    }
+
+    // 6. Store the result
     const agreement = await db.agreement.create({
       data: {
         userId,
         fileName: file.name,
         extractedFields: JSON.stringify({
-          rent: extractionResponse.rent,
-          deposit: extractionResponse.deposit,
-          leaseDuration: extractionResponse.leaseDuration,
-          lockInPeriod: extractionResponse.lockInPeriod,
-          noticePeriod: extractionResponse.noticePeriod,
-          rentEscalation: extractionResponse.rentEscalation,
-          maintenanceResponsibility: extractionResponse.maintenanceResponsibility,
-          utilityResponsibility: extractionResponse.utilityResponsibility,
-          penalties: extractionResponse.penalties,
-          terminationConditions: extractionResponse.terminationConditions,
+          rent: validatedExtraction.rent,
+          deposit: validatedExtraction.deposit,
+          leaseDuration: validatedExtraction.leaseDuration,
+          lockInPeriod: validatedExtraction.lockInPeriod,
+          noticePeriod: validatedExtraction.noticePeriod,
+          rentEscalation: validatedExtraction.rentEscalation,
+          maintenanceResponsibility: validatedExtraction.maintenanceResponsibility,
+          utilityResponsibility: validatedExtraction.utilityResponsibility,
+          penalties: validatedExtraction.penalties,
+          terminationConditions: validatedExtraction.terminationConditions,
         }),
-        summary: extractionResponse.summary,
-        flaggedClauses: JSON.stringify(flagsResponse.flaggedClauses),
+        summary: validatedExtraction.summary,
+        flaggedClauses: JSON.stringify(validatedFlags.flaggedClauses),
       },
     });
 
@@ -117,4 +178,3 @@ export async function GET() {
     );
   }
 }
-

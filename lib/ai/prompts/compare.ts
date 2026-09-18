@@ -245,7 +245,7 @@ export async function generateComparisonTradeoffs(
     throw new Error('At least 2 properties are required for comparison.');
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   const isMock = !apiKey || apiKey === 'your-anthropic-api-key-here' || apiKey === 'mock-api-key';
 
   if (isMock) {

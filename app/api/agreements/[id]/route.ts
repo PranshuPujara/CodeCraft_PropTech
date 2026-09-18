@@ -19,6 +19,13 @@ export async function GET(
       );
     }
 
+    if (agreement.userId !== 'demo-user-1') {
+      return NextResponse.json(
+        { error: 'Unauthorized access to agreement' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json({
       id: agreement.id,
       userId: agreement.userId,

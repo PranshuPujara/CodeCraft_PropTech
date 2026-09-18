@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { anthropic, DEFAULT_MODEL } from '../../lib/ai/client';
+import { groq, DEFAULT_MODEL, completeText, completeStructuredJSON } from '../../lib/ai/client';
 import {
   LEGAL_GUARDRAIL_DISCLAIMER,
   AgreementExtractionResponse,
@@ -16,9 +16,9 @@ import { DECISION_ASSISTANT_SYSTEM_PROMPT } from '../../lib/ai/prompts/decisionA
 import { COPILOT_SYSTEM_PROMPT } from '../../lib/ai/prompts/copilot';
 
 describe('Shared AI Foundation (lib/ai)', () => {
-  it('exports single Anthropic client instance and default model', () => {
-    expect(anthropic).toBeDefined();
-    expect(DEFAULT_MODEL).toBe('claude-3-5-sonnet-20241022');
+  it('exports single Groq client instance and default model', () => {
+    expect(groq).toBeDefined();
+    expect(DEFAULT_MODEL).toBe('llama-3.1-70b-versatile');
   });
 
   it('contains mandatory legal advice guardrail disclaimer', () => {

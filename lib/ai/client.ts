@@ -1,18 +1,18 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Groq from 'groq-sdk';
 
 /**
- * Shared Anthropic AI Client Wrapper — Rental Intelligence Platform
+ * Shared Groq AI Client Wrapper — Rental Intelligence Platform
  * ARCHITECTURE.md §7
  * Single source of truth for all LLM calls.
  */
 
-const apiKey = process.env.ANTHROPIC_API_KEY || 'mock-api-key';
+const apiKey = process.env.GROQ_API_KEY || 'mock-api-key';
 
-export const anthropic = new Anthropic({
+export const groq = new Groq({
   apiKey: apiKey,
 });
 
-export const DEFAULT_MODEL = 'claude-3-5-sonnet-20241022';
+export const DEFAULT_MODEL = process.env.GROQ_MODEL || 'llama-3.1-70b-versatile';
 
 export interface AICompletionOptions {
   model?: string;
@@ -23,7 +23,7 @@ export interface AICompletionOptions {
 }
 
 /**
- * Executes a completion request with Anthropic Claude API.
+ * Executes a completion request with Groq API.
  */
 export async function completeText(options: AICompletionOptions): Promise<string> {
   const model = options.model || DEFAULT_MODEL;
@@ -31,19 +31,17 @@ export async function completeText(options: AICompletionOptions): Promise<string
   const temperature = options.temperature ?? 0.2;
 
   try {
-    const response = await anthropic.messages.create({
+    const response = await groq.chat.completions.create({
       model,
       max_tokens: maxTokens,
       temperature,
-      system: options.systemPrompt,
-      messages: [{ role: 'user', content: options.userMessage }],
+      messages: [
+        { role: 'system', content: options.systemPrompt },
+        { role: 'user', content: options.userMessage }
+      ],
     });
 
-    const firstBlock = response.content[0];
-    if (firstBlock && firstBlock.type === 'text') {
-      return firstBlock.text;
-    }
-    return '';
+    return response.choices[0]?.message?.content || '';
   } catch (error) {
     console.error('Error in AI completeText:', error);
     throw error;
@@ -59,12 +57,24 @@ export async function completeStructuredJSON<T>(
 ): Promise<T> {
   const jsonSystemPrompt = `${options.systemPrompt}\n\nIMPORTANT: You MUST respond ONLY with valid JSON matching the requested structure. Do not include markdown code block backticks (e.g. \`\`\`json) or any conversational text before/after the JSON string.`;
 
-  const rawText = await completeText({
-    ...options,
-    systemPrompt: jsonSystemPrompt,
-  });
+  const model = options.model || DEFAULT_MODEL;
+  const maxTokens = options.maxTokens || 1500;
+  const temperature = options.temperature ?? 0.2;
 
   try {
+    const response = await groq.chat.completions.create({
+      model,
+      max_tokens: maxTokens,
+      temperature,
+      messages: [
+        { role: 'system', content: jsonSystemPrompt },
+        { role: 'user', content: options.userMessage }
+      ],
+      response_format: { type: 'json_object' }
+    });
+
+    const rawText = response.choices[0]?.message?.content || '';
+
     // Clean codeblock formatting if the LLM outputted ```json ... ```
     const cleanedText = rawText
       .replace(/^```json\s*/i, '')
@@ -73,8 +83,8 @@ export async function completeStructuredJSON<T>(
       .trim();
 
     return JSON.parse(cleanedText) as T;
-  } catch (err) {
-    console.error('Failed to parse AI structured JSON output:', rawText, err);
+  } catch (err: any) {
+    console.error('Failed to parse AI structured JSON output:', err);
     throw new Error(`AI JSON parse failure: ${(err as Error).message}`);
   }
 }
