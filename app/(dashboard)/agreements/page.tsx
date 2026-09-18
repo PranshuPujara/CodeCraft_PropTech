@@ -34,6 +34,23 @@ export default function AgreementsPage() {
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
+
+    // Client-side validation
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setUploadError('Invalid file type. Please upload a PDF document (.pdf).');
+      return;
+    }
+
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size <= 0) {
+      setUploadError('The selected file is empty. Please choose a valid PDF.');
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      setUploadError('File size exceeds 10MB limit. Please choose a smaller file.');
+      return;
+    }
+
     setIsUploading(true);
     setUploadError(null);
 

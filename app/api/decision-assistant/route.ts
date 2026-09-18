@@ -37,25 +37,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Override with any explicit preferences sent in request
+    // Override with any explicit preferences sent in request with boundary validation
+    const rawBudget = Number(body.preferences?.budget);
+    const validBudget = !isNaN(rawBudget) && rawBudget > 0 && rawBudget <= 10000000 ? rawBudget : userBudget;
+
+    const rawBedrooms = body.preferences?.bedrooms !== undefined ? Number(body.preferences.bedrooms) : parsedPreferences.bedrooms;
+    const validBedrooms = typeof rawBedrooms === 'number' && !isNaN(rawBedrooms) && rawBedrooms >= 0 && rawBedrooms <= 10 ? rawBedrooms : undefined;
+
+    const rawCommute = body.preferences?.maxCommuteMinutes ? Number(body.preferences.maxCommuteMinutes) : undefined;
+    const validCommute = typeof rawCommute === 'number' && !isNaN(rawCommute) && rawCommute > 0 && rawCommute <= 300 ? rawCommute : undefined;
+
     const effectivePreferences: DecisionUserPreferences = {
-      budget: Number(body.preferences?.budget) || userBudget,
-      location: body.preferences?.location || parsedPreferences.location,
-      bedrooms: body.preferences?.bedrooms !== undefined ? Number(body.preferences.bedrooms) : parsedPreferences.bedrooms,
-      furnishing: body.preferences?.furnishing || parsedPreferences.furnishing,
-      amenities: Array.isArray(body.preferences?.amenities) ? body.preferences.amenities : parsedPreferences.amenities,
-      commutePoint: body.preferences?.commutePoint || parsedPreferences.commutePoint,
-      maxCommuteMinutes: body.preferences?.maxCommuteMinutes ? Number(body.preferences.maxCommuteMinutes) : undefined,
-      priority: body.preferences?.priority || 'Balanced',
+      budget: validBudget,
+      location: typeof body.preferences?.location === 'string' ? body.preferences.location.slice(0, 100) : parsedPreferences.location,
+      bedrooms: validBedrooms,
+      furnishing: typeof body.preferences?.furnishing === 'string' ? body.preferences.furnishing.slice(0, 50) : parsedPreferences.furnishing,
+      amenities: Array.isArray(body.preferences?.amenities) ? body.preferences.amenities.filter((a: any) => typeof a === 'string').slice(0, 20) : parsedPreferences.amenities,
+      commutePoint: typeof body.preferences?.commutePoint === 'string' ? body.preferences.commutePoint.slice(0, 100) : parsedPreferences.commutePoint,
+      maxCommuteMinutes: validCommute,
+      priority: typeof body.preferences?.priority === 'string' ? body.preferences.priority.slice(0, 50) : 'Balanced',
     };
 
     // 2. Fetch Shortlisted Properties
     let candidateProperties: any[] = [];
 
     if (Array.isArray(body.propertyIds)) {
-      if (body.propertyIds.length > 0) {
+      const sanitizedPropertyIds = body.propertyIds
+        .filter((id: any) => typeof id === 'string' && id.trim().length > 0)
+        .map((id: string) => id.trim())
+        .slice(0, 20);
+
+      if (sanitizedPropertyIds.length > 0) {
         candidateProperties = await db.property.findMany({
-          where: { id: { in: body.propertyIds } },
+          where: { id: { in: sanitizedPropertyIds } },
           include: { costBreakdown: true },
         });
       } else {

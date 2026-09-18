@@ -102,16 +102,38 @@ export default function RoommatesPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleEvaluate = async () => {
-    setIsEvaluating(true);
     setErrorMsg(null);
+
+    const bA = Number(profileA.budget);
+    const bB = Number(profileB.budget);
+
+    if (isNaN(bA) || bA <= 0) {
+      setErrorMsg('Please enter a valid monthly budget for Profile A (greater than ₹0).');
+      return;
+    }
+    if (bA > 10000000) {
+      setErrorMsg('Monthly budget for Profile A cannot exceed ₹1,00,00,000.');
+      return;
+    }
+
+    if (isNaN(bB) || bB <= 0) {
+      setErrorMsg('Please enter a valid monthly budget for Profile B (greater than ₹0).');
+      return;
+    }
+    if (bB > 10000000) {
+      setErrorMsg('Monthly budget for Profile B cannot exceed ₹1,00,00,000.');
+      return;
+    }
+
+    setIsEvaluating(true);
 
     try {
       const res = await fetch('/api/roommates/compatibility', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profileA: { ...profileA, budget: Number(profileA.budget) || 18000 },
-          profileB: { ...profileB, budget: Number(profileB.budget) || 18000 },
+          profileA: { ...profileA, budget: bA },
+          profileB: { ...profileB, budget: bB },
         }),
       });
 
@@ -179,6 +201,10 @@ export default function RoommatesPage() {
                 </label>
                 {dim.type === 'input' ? (
                   <input
+                    type={dim.key === 'budget' ? 'number' : 'text'}
+                    min={dim.key === 'budget' ? '1000' : undefined}
+                    max={dim.key === 'budget' ? '10000000' : undefined}
+                    step={dim.key === 'budget' ? '500' : undefined}
                     value={profileA[dim.key] || ''}
                     onChange={(e) =>
                       setProfileA((p) => ({ ...p, [dim.key]: e.target.value }))
@@ -217,6 +243,10 @@ export default function RoommatesPage() {
                 </label>
                 {dim.type === 'input' ? (
                   <input
+                    type={dim.key === 'budget' ? 'number' : 'text'}
+                    min={dim.key === 'budget' ? '1000' : undefined}
+                    max={dim.key === 'budget' ? '10000000' : undefined}
+                    step={dim.key === 'budget' ? '500' : undefined}
                     value={profileB[dim.key] || ''}
                     onChange={(e) =>
                       setProfileB((p) => ({ ...p, [dim.key]: e.target.value }))

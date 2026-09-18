@@ -45,12 +45,28 @@ export default function RecommendationsPage() {
   const [furnishingPref, setFurnishingPref] = useState('Any');
   const [results, setResults] = useState<EnrichedRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const fetchRecommendations = useCallback(async () => {
+    setValidationError(null);
+
+    // Validate budget
+    if (budget.trim() !== '') {
+      const budgetNum = Number(budget);
+      if (isNaN(budgetNum) || budgetNum <= 0) {
+        setValidationError('Please enter a valid monthly budget greater than ₹0.');
+        return;
+      }
+      if (budgetNum > 10000000) {
+        setValidationError('Monthly budget cannot exceed ₹1,00,00,000.');
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      if (budget) params.set('budget', budget);
+      if (budget.trim()) params.set('budget', budget.trim());
       if (bedroomPref !== 'Any') params.set('bedrooms', bedroomPref);
       if (furnishingPref !== 'Any') params.set('furnishing', furnishingPref);
 
@@ -155,8 +171,15 @@ export default function RecommendationsPage() {
               Monthly budget (₹)
             </label>
             <input
+              type="number"
+              min="1000"
+              max="10000000"
+              step="500"
               value={budget}
-              onChange={(e) => setBudget(e.target.value)}
+              onChange={(e) => {
+                setBudget(e.target.value);
+                if (validationError) setValidationError(null);
+              }}
               className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
               placeholder="35000"
             />
@@ -200,6 +223,12 @@ export default function RecommendationsPage() {
             </button>
           </div>
         </div>
+
+        {validationError && (
+          <div className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs font-semibold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+            ⚠ {validationError}
+          </div>
+        )}
       </Card>
 
       {/* Results header */}
