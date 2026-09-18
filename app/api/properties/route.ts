@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build Prisma query conditions
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (maxBudget !== undefined) {
       where.rent = { lte: maxBudget };
@@ -111,12 +113,13 @@ export async function GET(request: NextRequest) {
       properties,
       count: properties.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching properties:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       {
         error: 'Failed to fetch properties',
-        details: error.message || 'Internal server error',
+        details: message,
       },
       { status: 500 }
     );

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 
+export const dynamic = 'force-dynamic';
+
 const DEFAULT_USER_ID = 'demo-user-1';
 
 export async function GET(request: NextRequest) {
@@ -9,7 +11,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId') || DEFAULT_USER_ID;
     const isShortlistedParam = searchParams.get('isShortlisted');
 
-    const where: any = { userId };
+    const where: Record<string, unknown> = { userId };
 
     if (isShortlistedParam !== null) {
       where.isShortlisted = isShortlistedParam === 'true';
@@ -49,12 +51,13 @@ export async function GET(request: NextRequest) {
       savedProperties: parsedSaved,
       count: parsedSaved.length,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error retrieving saved properties:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       {
         error: 'Failed to retrieve saved properties',
-        details: error.message || 'Internal server error',
+        details: message,
       },
       { status: 500 }
     );
@@ -148,12 +151,13 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error saving property:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       {
         error: 'Failed to save property',
-        details: error.message || 'Internal server error',
+        details: message,
       },
       { status: 500 }
     );
@@ -200,12 +204,13 @@ export async function DELETE(request: NextRequest) {
       propertyId: propertyId.trim(),
       userId,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting saved property:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       {
         error: 'Failed to remove saved property',
-        details: error.message || 'Internal server error',
+        details: message,
       },
       { status: 500 }
     );

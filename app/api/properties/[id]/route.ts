@@ -42,12 +42,13 @@ export async function GET(
         amenities: parsedAmenities,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching property detail:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       {
         error: 'Failed to fetch property detail',
-        details: error.message || 'Internal server error',
+        details: message,
       },
       { status: 500 }
     );

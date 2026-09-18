@@ -76,12 +76,13 @@ export async function GET(
       propertyId: property.id,
       ...costResult,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error calculating property cost:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
       {
         error: 'Failed to calculate property cost',
-        details: error.message || 'Internal server error',
+        details: message,
       },
       { status: 500 }
     );
