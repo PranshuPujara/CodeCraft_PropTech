@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   HomeIcon,
-  HeartIcon,
+  BookmarkIcon,
   StarIcon,
   ChevronRightIcon,
   CompareIcon,
@@ -373,110 +373,96 @@ function PropertyCard({
   return (
     <Card className="group flex flex-col overflow-hidden transition hover:shadow-md dark:border-gray-800">
       {/* Visual Cover / Banner */}
-      <div className="relative flex h-40 items-center justify-center bg-gradient-to-br from-gray-100 via-slate-100 to-gray-200 dark:from-gray-800/80 dark:via-gray-800 dark:to-gray-900">
-        <HomeIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 transition group-hover:scale-105" />
-
-        {/* Top Badges */}
-        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
-          <Badge tone="blue">{p.bedrooms} BHK</Badge>
-          <Badge tone="blue">{p.furnishing}</Badge>
-        </div>
-
-        {/* Remove Button */}
+      <div className="relative flex h-48 items-center justify-center bg-gradient-to-br from-gray-100 via-slate-100 to-gray-200 dark:from-gray-800/80 dark:via-gray-800 dark:to-gray-900">
+        <HomeIcon className="h-12 w-12 text-gray-300 transition group-hover:scale-105 dark:text-gray-600" />
+        
+        {/* Wishlist / Bookmark Button */}
         <button
-          onClick={onRemove}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-sm backdrop-blur-sm transition hover:scale-110 hover:bg-rose-50 dark:bg-gray-900/90 dark:hover:bg-rose-950/50"
-          title="Remove from saved"
+          onClick={(e) => {
+            e.preventDefault();
+            onRemove();
+          }}
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-emerald-600 shadow-sm backdrop-blur-sm transition hover:scale-110 hover:bg-emerald-50 dark:bg-gray-900/90 dark:hover:bg-emerald-950/50"
+          title="Remove from wishlist"
+          aria-label="Remove from wishlist"
+          aria-pressed={true}
         >
-          <HeartIcon className="h-4 w-4" />
+          <BookmarkIcon className="h-4 w-4" />
         </button>
-
-        {/* Shortlist Ribbon Status */}
-        {isShortlisted && (
-          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-emerald-600/90 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm backdrop-blur-sm">
-            <StarIcon className="h-3 w-3" />
-            <span>Shortlisted for Decision</span>
-          </div>
-        )}
       </div>
 
       {/* Card Body */}
       <div className="flex flex-1 flex-col p-4">
-        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{p.location}</p>
-        <Link
-          href={`/properties/${p.id}`}
-          className="mt-0.5 font-bold text-gray-900 line-clamp-1 hover:text-emerald-600 dark:text-white dark:hover:text-emerald-400"
-        >
+        {/* Title */}
+        <h3 className="font-bold line-clamp-2 text-gray-900 dark:text-white">
           {p.title}
-        </Link>
+        </h3>
 
-        {p.commute && (
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-            📍 {p.commute}
+        {/* Location & Commute */}
+        <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {p.location}
+          {p.commute && <span> · 📍 {p.commute}</span>}
+        </p>
+
+        {/* Financial Summary */}
+        <div className="mt-4">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {money(p.rent)} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">/ month rent</span>
           </p>
-        )}
-
-        {/* True Cost Breakdown Box */}
-        <div className="mt-3.5 rounded-xl bg-gray-50 p-3 dark:bg-gray-800/50">
-          <div className="grid grid-cols-3 gap-1 text-center">
-            <div>
-              <span className="text-[10px] uppercase tracking-wider text-gray-400">Base Rent</span>
-              <p className="text-xs font-semibold text-gray-900 dark:text-white">{money(p.rent)}</p>
-            </div>
-            <div className="border-x border-gray-200 dark:border-gray-700">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-800 dark:text-emerald-300">
-                True Monthly
-              </span>
-              <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                ≈ {money(monthlyCost)}
-              </p>
-            </div>
-            <div>
-              <span className="text-[10px] uppercase tracking-wider text-gray-400">Move-in Cash</span>
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">{money(moveInCost)}</p>
-            </div>
+          {/* Preserved financial intelligence visually simplified */}
+          <div className="mt-1 flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+            <span className="text-emerald-700 dark:text-emerald-400">True Monthly: ≈{money(monthlyCost)}</span>
+            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <span>Move-in: {money(moveInCost)}</span>
           </div>
         </div>
 
-        {/* Amenities preview */}
-        {amenitiesList.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1">
-            {amenitiesList.slice(0, 3).map((a) => (
-              <span
-                key={a}
-                className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-              >
-                {a}
-              </span>
-            ))}
-            {amenitiesList.length > 3 && (
-              <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                +{amenitiesList.length - 3}
-              </span>
-            )}
-          </div>
-        )}
+        {/* Badges and Amenities grouped together */}
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+            {p.furnishing}
+          </span>
+          <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+            {p.bedrooms} BHK
+          </span>
+          {amenitiesList.slice(0, 3).map((a) => (
+            <span
+              key={a}
+              className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+            >
+              {a}
+            </span>
+          ))}
+          {amenitiesList.length > 3 && (
+            <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+              +{amenitiesList.length - 3}
+            </span>
+          )}
+        </div>
+        
+        {/* Spacer to push footer to bottom */}
+        <div className="flex-1"></div>
 
         {/* Card Footer Actions */}
-        <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+        <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
           <button
             onClick={onToggleShortlist}
-            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
               isShortlisted
-                ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700'
-                : 'border border-gray-200 bg-white text-gray-700 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
             }`}
+            aria-label={isShortlisted ? 'Remove from comparison' : 'Add to compare'}
           >
-            <StarIcon className="h-3.5 w-3.5" />
-            {isShortlisted ? 'In Shortlist' : '+ Shortlist'}
+            <span className="text-sm">{isShortlisted ? '✓' : '+'}</span>
+            {isShortlisted ? 'Added to Compare' : 'Add to Compare'}
           </button>
 
           <Link
             href={`/properties/${p.id}`}
-            className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400"
+            className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
           >
-            Details
-            <ChevronRightIcon className="h-3.5 w-3.5" />
+            View Details →
           </Link>
         </div>
       </div>
@@ -552,6 +538,7 @@ function PropertyDenseRow({
                 ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                 : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
             }`}
+            aria-label={isShortlisted ? 'Remove from comparison' : 'Add to compare'}
           >
             <StarIcon className="h-3 w-3" />
             {isShortlisted ? 'Shortlisted' : '+ Shortlist'}
@@ -559,10 +546,11 @@ function PropertyDenseRow({
 
           <button
             onClick={onRemove}
-            className="flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200 bg-white text-rose-500 hover:bg-rose-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-rose-950/40"
-            title="Remove from saved"
+            className="flex h-8 w-8 items-center justify-center rounded-xl border border-gray-200 bg-white text-emerald-600 hover:bg-emerald-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-emerald-950/40"
+            title="Remove from wishlist"
+            aria-label="Remove property from wishlist"
           >
-            <HeartIcon className="h-4 w-4" />
+            <BookmarkIcon className="h-4 w-4" />
           </button>
 
           <Link

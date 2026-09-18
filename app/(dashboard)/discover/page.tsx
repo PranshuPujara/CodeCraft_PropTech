@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { demoProperties } from '@/lib/demo-data';
-import { HomeIcon, HeartIcon, HeartOutlineIcon, FilterIcon, SearchIcon } from '@/components/icons';
+import { HomeIcon, BookmarkIcon, BookmarkOutlineIcon, FilterIcon, SearchIcon } from '@/components/icons';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
@@ -212,101 +212,100 @@ export default function DiscoverPage() {
             property.deposit + property.brokerage + property.rent;
 
           return (
-            <Card key={property.id} className="flex flex-col overflow-hidden">
+            <Card key={property.id} className="flex flex-col overflow-hidden transition hover:shadow-md dark:border-gray-800">
               {/* Photo Area */}
-              <div className="relative flex h-44 items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
-                <HomeIcon className="h-12 w-12 text-gray-300 dark:text-gray-600" />
+              <div className="relative flex h-48 items-center justify-center bg-gradient-to-br from-gray-100 via-slate-100 to-gray-200 dark:from-gray-800/80 dark:via-gray-800 dark:to-gray-900">
+                <HomeIcon className="h-12 w-12 text-gray-300 dark:text-gray-600 transition hover:scale-105" />
+                
+                {/* Wishlist / Bookmark Button */}
                 <button
-                  onClick={() => toggleSave(property.id)}
-                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm backdrop-blur-sm transition hover:scale-110 dark:bg-gray-900/90 dark:text-gray-300"
-                  title={isSaved ? 'Remove from saved' : 'Save property'}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleSave(property.id);
+                  }}
+                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm backdrop-blur-sm transition hover:scale-110 hover:text-emerald-600 dark:bg-gray-900/90 dark:text-gray-300"
+                  title={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
+                  aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
+                  aria-pressed={isSaved}
                 >
                   {isSaved ? (
-                    <HeartIcon className="h-4 w-4 text-rose-500" />
+                    <BookmarkIcon className="h-4 w-4 text-emerald-600" />
                   ) : (
-                    <HeartOutlineIcon className="h-4 w-4" />
+                    <BookmarkOutlineIcon className="h-4 w-4" />
                   )}
                 </button>
-                <div className="absolute bottom-3 left-3 flex gap-1.5">
-                  <Badge tone="blue">{property.bedrooms} BHK</Badge>
-                  <Badge tone="blue">{property.furnishing}</Badge>
-                </div>
               </div>
 
               {/* Content */}
               <div className="flex flex-1 flex-col p-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{property.location}</p>
-                <Link
-                  href={`/properties/${property.id}`}
-                  className="mt-0.5 font-semibold text-gray-900 hover:text-emerald-600 dark:text-white dark:hover:text-emerald-400"
-                >
+                {/* Title */}
+                <h3 className="font-bold text-gray-900 line-clamp-2 dark:text-white">
                   {property.title}
-                </Link>
+                </h3>
+                
+                {/* Location */}
+                <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  {property.location}
+                </p>
 
-                {/* Costs from Backend Engine */}
-                <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      Base rent
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {money(property.rent)}
-                      <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
-                        /mo
-                      </span>
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-baseline justify-between">
-                    <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                      True monthly
-                    </span>
-                    <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
-                      ≈ {money(monthlyEst)}
-                      <span className="text-xs font-normal">/mo</span>
-                    </span>
-                  </div>
-                  <div className="mt-1 flex items-baseline justify-between border-t border-gray-200/50 pt-1 text-[11px] text-gray-500 dark:border-gray-700/50 dark:text-gray-400">
-                    <span>Move-in capital</span>
-                    <span>{money(moveInEst)}</span>
+                {/* Financial Summary */}
+                <div className="mt-4">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {money(property.rent)} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">/ month rent</span>
+                  </p>
+                  {/* Preserved financial intelligence visually simplified */}
+                  <div className="mt-1 flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+                    <span className="text-emerald-700 dark:text-emerald-400">True Monthly: ≈{money(monthlyEst)}</span>
+                    <span className="text-gray-300 dark:text-gray-600">|</span>
+                    <span>Move-in: {money(moveInEst)}</span>
                   </div>
                 </div>
 
-                {/* Amenities */}
-                {Array.isArray(property.amenities) && property.amenities.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {property.amenities.slice(0, 3).map((a) => (
-                      <span
-                        key={a}
-                        className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                      >
-                        {a}
-                      </span>
-                    ))}
-                    {property.amenities.length > 3 && (
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                        +{property.amenities.length - 3}
-                      </span>
-                    )}
-                  </div>
-                )}
+                {/* Badges and Amenities grouped together */}
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+                    {property.furnishing}
+                  </span>
+                  <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+                    {property.bedrooms} BHK
+                  </span>
+                  {Array.isArray(property.amenities) && property.amenities.slice(0, 3).map((a) => (
+                    <span
+                      key={a}
+                      className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                    >
+                      {a}
+                    </span>
+                  ))}
+                  {Array.isArray(property.amenities) && property.amenities.length > 3 && (
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                      +{property.amenities.length - 3}
+                    </span>
+                  )}
+                </div>
+                
+                {/* Spacer to push footer to bottom */}
+                <div className="flex-1"></div>
 
-                {/* Actions */}
-                <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
+                {/* Footer */}
+                <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
                   <button
                     onClick={() => toggleCompare(property.id)}
-                    className={`text-xs font-medium transition ${
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                       isCompare
-                        ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
-                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
                     }`}
+                    aria-label={isCompare ? 'Remove from comparison' : 'Add to compare'}
                   >
-                    {isCompare ? '✓ Selected to compare' : '+ Add to compare'}
+                    <span className="text-sm">{isCompare ? '✓' : '+'}</span>
+                    {isCompare ? 'Added to Compare' : 'Add to Compare'}
                   </button>
                   <Link
                     href={`/properties/${property.id}`}
-                    className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+                    className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
                   >
-                    View details →
+                    View Details →
                   </Link>
                 </div>
               </div>
