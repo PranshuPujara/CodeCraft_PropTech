@@ -53,10 +53,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json(compatibilityResult, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in roommate compatibility API:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json(
-      { error: 'Failed to evaluate compatibility.', details: error.message },
+      { error: 'Failed to evaluate compatibility.', details: message },
       { status: 500 }
     );
   }

@@ -32,7 +32,7 @@ CRITICAL REQUIREMENTS:
 4. Grounding: NEVER invent preferences that are not stated in the input profiles.
 `;
 
-export function buildCompatibilityUserPrompt(profileA: Record<string, any>, profileB: Record<string, any>): string {
+export function buildCompatibilityUserPrompt(profileA: Record<string, unknown>, profileB: Record<string, unknown>): string {
   return `
 Profile A:
 ${JSON.stringify(profileA, null, 2)}
@@ -41,3 +41,4 @@ Profile B:
 ${JSON.stringify(profileB, null, 2)}
   `.trim();
 }
+
