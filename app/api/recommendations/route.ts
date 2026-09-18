@@ -7,6 +7,8 @@ import {
 } from '../../../lib/ai/prompts/recommend';
 import { calculateFullCostBreakdown } from '../../../lib/cost';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/recommendations
  * PRODUCT.md §6.4 | ARCHITECTURE.md §4
@@ -44,7 +46,7 @@ export async function GET(req: NextRequest) {
       const user = await db.user.findUnique({ where: { id: userId } });
       
       if (user) {
-        let dbPrefs: any = {};
+        let dbPrefs: Partial<UserPreferencesInput> = {};
         try {
           if (user.preferences) {
             dbPrefs = JSON.parse(user.preferences);
