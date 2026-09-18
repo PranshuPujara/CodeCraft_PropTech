@@ -1,74 +1,36 @@
-# Rental Intelligence Platform
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-An AI-powered rental decision platform for first-time renters, students, and young professionals. It is **not** a property listing clone — the product exists to help someone go from "here are some apartments" to "here is the one I should pick, and why," by making true cost, agreement risk, and roommate fit explainable rather than hidden.
+## Getting Started
 
-Read `PRODUCT.md` before building any feature. Read `ARCHITECTURE.md` before writing any code. If you are an AI coding agent, read `AGENT_RULES.md` before doing either.
-
-## Tech stack
-
-| Layer | Choice | Why |
-|---|---|---|
-| Framework | Next.js 14 (App Router, TypeScript) | Single repo, single deploy target, API routes = no separate backend service to stand up in 24h |
-| Styling | Tailwind CSS | Fast, consistent, no design-system build cost |
-| ORM / DB | Prisma + SQLite (dev) → Postgres (deploy) | Zero-config local dev, one-line swap to Postgres for deployment |
-| AI | Anthropic Claude API (Messages API, structured JSON outputs) | Used for agreement extraction, cost/compatibility explanations, and the copilot |
-| File parsing | `pdf-parse` (or equivalent) for agreement uploads | Lightweight, no external service dependency |
-| Deployment | Vercel (app) + Vercel Postgres or Neon (DB) | Fastest path to a public demo URL |
-| Auth | Minimal — single demo user / local-storage session, no real auth provider | Out of scope for a 24h MVP; see `PRODUCT.md` Future list |
-
-> If the team changes any of these before/during the build, update this table in the same commit. This table is the source of truth for stack decisions — do not let it drift from what's actually in `package.json`.
-
-## Getting started
+First, run the development server:
 
 ```bash
-git clone <repo-url>
-cd rental-intelligence-platform
-npm install
-cp .env.example .env        # fill in ANTHROPIC_API_KEY and DATABASE_URL
-npx prisma migrate dev
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-App runs at `http://localhost:3000`.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Required environment variables
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-See `.env.example` for the full list and short descriptions. **Never commit `.env`.** Only `.env.example` (with placeholder values, no real secrets) is checked in.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Running tests
+## Learn More
 
-```bash
-npm test          # unit tests (cost calculation, clause extraction shape, compatibility scoring)
-npm run test:e2e  # (if time allows) core flow smoke test
-```
+To learn more about Next.js, take a look at the following resources:
 
-Per `AGENT_RULES.md`, cost calculation logic and agreement-extraction output shape must have tests — these are the two places where a silently wrong answer is worst.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## Deployment / demo
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-- **Live demo:** `<add Vercel URL here once deployed>`
-- **Demo video / walkthrough:** `<add link here>`
+## Deploy on Vercel
 
-## Project structure
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-```
-/app              # Next.js routes (pages + API routes)
-/components       # UI components
-/lib              # business logic: cost calc, AI clients, prompts, scoring
-/prisma           # schema + migrations
-/docs             # PRODUCT.md, ARCHITECTURE.md, AGENT_RULES.md
-```
-
-Full breakdown and conventions are in `ARCHITECTURE.md`.
-
-## AI usage disclosure
-
-This project was built with heavy use of AI coding agents (Claude Code / Cursor / similar) working from the specs in `PRODUCT.md` and `ARCHITECTURE.md`, under the operating rules in `AGENT_RULES.md`. All AI-generated code was reviewed by the team before merge. The product itself also uses an LLM (Anthropic Claude) at runtime for: rental agreement clause extraction/explanation, cost and recommendation explanations, roommate compatibility reasoning, and the in-app copilot chat — all clearly surfaced to the user as AI-generated, explainable output rather than opaque scores.
-
-## Team
-
-`<names / roles>`
-
-## License
-
-`<if applicable>`
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
