@@ -73,14 +73,30 @@ export interface RoommateCompatibilityResponse {
 // 6. Decision Assistant (§PRODUCT 6.8)
 export interface PropertyProCon {
   propertyId: string;
+  propertyName?: string;
   pros: string[];
   cons: string[];
+  preferenceAlignment?: string[];
+  tradeoffs?: string[];
+}
+
+export interface DecisionAssistantPropertyAnalysis {
+  propertyId: string;
+  propertyName: string;
+  pros: string[];
+  cons: string[];
+  preferenceAlignment: string[];
+  tradeoffs: string[];
 }
 
 export interface DecisionAssistantResponse {
-  narrative: string; // Synthesized narrative weighing shortlisted properties against user preferences
-  propertyProsCons: PropertyProCon[];
+  summary: string;
+  narrative?: string;
+  properties: DecisionAssistantPropertyAnalysis[];
+  propertyProsCons?: PropertyProCon[];
+  keyTradeoffs: string[];
 }
+
 
 // 7. AI Rental Copilot (§PRODUCT 6.9)
 export interface ContextRef {
