@@ -32,15 +32,17 @@ interface ComparedProperty {
 
 interface TradeOff {
   dimension: string;
-  propertyAId: string;
-  propertyBId: string;
-  statement: string;
+  propertyAId?: string;
+  propertyBId?: string;
+  statement?: string;
+  tradeoff?: string;
 }
 
 function CompareContent() {
   const searchParams = useSearchParams();
   const [properties, setProperties] = useState<ComparedProperty[]>([]);
   const [tradeoffs, setTradeoffs] = useState<TradeOff[]>([]);
+  const [summary, setSummary] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -89,14 +91,29 @@ function CompareContent() {
             if (compareData.properties && compareData.properties.length >= 2) {
               setProperties(compareData.properties);
               setTradeoffs(compareData.tradeoffs || []);
+              setSummary(compareData.summary || null);
               setIsLoading(false);
               return;
             }
           }
         }
 
-        // Fallback to demo properties
-        setProperties(demoProperties.slice(0, 2) as any);
+        // Fallback to demo properties with realistic tradeoffs
+        const fallbackProps = demoProperties.slice(0, 2);
+        setProperties(fallbackProps as any);
+        setTradeoffs([
+          {
+            dimension: 'Rent',
+            tradeoff: `${fallbackProps[1].title} is ₹4,000/month cheaper in base rent than ${fallbackProps[0].title}.`,
+            statement: `${fallbackProps[1].title} is ₹4,000/month cheaper in base rent than ${fallbackProps[0].title}.`,
+          },
+          {
+            dimension: 'Furnishing',
+            tradeoff: `${fallbackProps[0].title} is Fully Furnished, whereas ${fallbackProps[1].title} is Semi-Furnished.`,
+            statement: `${fallbackProps[0].title} is Fully Furnished, whereas ${fallbackProps[1].title} is Semi-Furnished.`,
+          },
+        ]);
+        setSummary('Side-by-side trade-off analysis comparing monthly rent savings against furnishing preferences.');
       } catch (e) {
         console.error('Error loading comparison:', e);
         setProperties(demoProperties.slice(0, 2) as any);
@@ -238,19 +255,32 @@ function CompareContent() {
 
       {/* AI Trade-offs from Backend */}
       {tradeoffs.length > 0 && (
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            Structured Trade-off Insights
-          </h2>
-          <div className="mt-3 grid gap-4 md:grid-cols-2">
-            {tradeoffs.map((t, idx) => (
-              <Card key={idx} className="p-4 border-l-4 border-l-emerald-500">
-                <Badge tone="blue">{t.dimension}</Badge>
-                <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
-                  {t.statement}
-                </p>
-              </Card>
-            ))}
+        <div className="space-y-3">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              Structured Trade-off Insights
+            </h2>
+            {summary && (
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                {summary}
+              </p>
+            )}
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {tradeoffs.map((t, idx) => {
+              const text = t.tradeoff || t.statement || '';
+              return (
+                <Card key={idx} className="p-4 border-l-4 border-l-emerald-500">
+                  <div className="flex items-center justify-between">
+                    <Badge tone="blue">{t.dimension}</Badge>
+                    <span className="text-[11px] text-gray-400">Pairwise Trade-off</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                    {text}
+                  </p>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}

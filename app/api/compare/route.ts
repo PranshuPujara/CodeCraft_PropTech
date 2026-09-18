@@ -140,9 +140,15 @@ export async function POST(req: NextRequest) {
     // Generate plain-language trade-offs naming dimensions and both properties
     const aiTradeoffs = await generateComparisonTradeoffs(comparisonInputs);
 
+    const normalizedTradeoffs = (aiTradeoffs.tradeoffs || []).map((t) => ({
+      ...t,
+      tradeoff: t.tradeoff || (t as any).statement,
+      statement: t.tradeoff || (t as any).statement,
+    }));
+
     return NextResponse.json({
       properties: formattedProperties,
-      tradeoffs: aiTradeoffs.tradeoffs,
+      tradeoffs: normalizedTradeoffs,
       summary: aiTradeoffs.summary,
       ...(missingIds.length > 0 ? { warnings: [`Some requested IDs were not found: ${missingIds.join(', ')}`] } : {}),
     });
