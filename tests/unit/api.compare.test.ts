@@ -1,7 +1,27 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '../../app/api/compare/route';
 import { db } from '../../lib/db';
+
+// Properly mock the AI client to avoid flaky real API calls during tests
+vi.mock('../../lib/ai/client', () => ({
+  completeStructuredJSON: vi.fn().mockImplementation(async ({ userMessage }) => {
+    // Extract property IDs from the userMessage for the mock response
+    const ids = [...userMessage.matchAll(/- ID: (cmu[a-z0-9]+)/g)].map(m => m[1]);
+    return {
+      tradeoffs: [
+        {
+          dimension: 'Rent',
+          propertyAId: ids[0] || 'mock-a',
+          propertyBId: ids[1] || 'mock-b',
+          tradeoff: 'Mock tradeoff statement',
+        }
+      ],
+      summary: 'Mock comparison summary',
+    };
+  }),
+  completeText: vi.fn(),
+}));
 
 describe('POST /api/compare API Route', () => {
   it('returns 400 when body is invalid or missing propertyIds', async () => {

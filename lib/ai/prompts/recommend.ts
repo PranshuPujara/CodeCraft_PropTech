@@ -134,7 +134,7 @@ export function generateDeterministicRecommendations(
   }> = [];
 
   for (const property of properties) {
-    let score = 50; // base score
+    let score = 100; // start at 100% and deduct for mismatches
     const matched: string[] = [];
     const unmatched: string[] = [];
 
@@ -145,19 +145,20 @@ export function generateDeterministicRecommendations(
       ? (JSON.parse(property.amenities || '[]') as string[])
       : [];
 
+    const monthlyCost = property.estimatedMonthlyCost || property.rent;
+
     // 1. Budget comparison
     if (preferences.budget && preferences.budget > 0) {
-      if (property.rent <= preferences.budget) {
-        const savings = preferences.budget - property.rent;
-        score += 25;
+      if (monthlyCost <= preferences.budget) {
+        const savings = preferences.budget - monthlyCost;
         if (savings > 0) {
-          matched.push(`within your ₹${preferences.budget.toLocaleString('en-IN')} budget (₹${property.rent.toLocaleString('en-IN')}/mo, saving ₹${savings.toLocaleString('en-IN')}/mo)`);
+          matched.push(`within your ₹${preferences.budget.toLocaleString('en-IN')} budget (₹${monthlyCost.toLocaleString('en-IN')}/mo, saving ₹${savings.toLocaleString('en-IN')}/mo)`);
         } else {
-          matched.push(`exact match to your ₹${preferences.budget.toLocaleString('en-IN')} budget (₹${property.rent.toLocaleString('en-IN')}/mo)`);
+          matched.push(`exact match to your ₹${preferences.budget.toLocaleString('en-IN')} budget (₹${monthlyCost.toLocaleString('en-IN')}/mo)`);
         }
       } else {
-        const over = property.rent - preferences.budget;
-        score -= 20;
+        const over = monthlyCost - preferences.budget;
+        score -= 25; // Penalty for over budget
         unmatched.push(`₹${over.toLocaleString('en-IN')}/mo over stated budget`);
       }
     }
@@ -167,21 +168,19 @@ export function generateDeterministicRecommendations(
       const prefLoc = preferences.location.toLowerCase();
       const propLoc = property.location.toLowerCase();
       if (propLoc.includes(prefLoc) || prefLoc.includes(propLoc)) {
-        score += 20;
         matched.push(`located in requested area (${property.location})`);
       } else {
-        score -= 5;
-        unmatched.push(`located in ${property.location}`);
+        score -= 10;
+        unmatched.push(`located in ${property.location} instead of ${preferences.location}`);
       }
     }
 
     // 3. Bedrooms match
     if (preferences.bedrooms !== undefined) {
       if (property.bedrooms === preferences.bedrooms) {
-        score += 15;
         matched.push(`exact ${property.bedrooms} BHK match`);
       } else {
-        score -= 10;
+        score -= 25; // Large penalty for incorrect BHK
         unmatched.push(`${property.bedrooms} BHK instead of ${preferences.bedrooms} BHK`);
       }
     }
@@ -189,11 +188,10 @@ export function generateDeterministicRecommendations(
     // 4. Furnishing match
     if (preferences.furnishing && preferences.furnishing.trim().length > 0) {
       if (property.furnishing.toLowerCase() === preferences.furnishing.toLowerCase()) {
-        score += 10;
         matched.push(`${property.furnishing} as requested`);
       } else {
-        score -= 5;
-        unmatched.push(`${property.furnishing}`);
+        score -= 15;
+        unmatched.push(`is ${property.furnishing} instead of ${preferences.furnishing}`);
       }
     }
 
@@ -204,15 +202,15 @@ export function generateDeterministicRecommendations(
       );
 
       if (matchingAmenities.length > 0) {
-        score += Math.min(20, matchingAmenities.length * 5);
         matched.push(`includes desired amenities: ${matchingAmenities.join(', ')}`);
       }
 
       const missingAmenities = preferences.amenities.filter(
         (a) => !propAmenities.some((pa) => pa.toLowerCase().includes(a.toLowerCase()))
       );
-      if (missingAmenities.length > 0 && matchingAmenities.length === 0) {
-        score -= 5;
+      
+      if (missingAmenities.length > 0) {
+        score -= missingAmenities.length * 5; // -5 per missing amenity
         unmatched.push(`missing requested ${missingAmenities.join(', ')}`);
       }
     }
@@ -262,10 +260,6 @@ export function generateDeterministicRecommendations(
   };
 }
 
-/**
- * Generates personalized property recommendations using Claude 3.5 Sonnet
- * or deterministic fallback.
- */
 export async function generatePropertyRecommendations(
   preferences: UserPreferencesInput,
   properties: CandidatePropertyInput[]
@@ -277,22 +271,7 @@ export async function generatePropertyRecommendations(
     };
   }
 
-  const apiKey = process.env.GROQ_API_KEY;
-  const isMock = !apiKey || apiKey === 'your-anthropic-api-key-here' || apiKey === 'mock-api-key';
-
-  if (isMock) {
-    return generateDeterministicRecommendations(preferences, properties);
-  }
-
-  try {
-    const userMessage = buildRecommendationUserMessage(preferences, properties);
-    return await completeStructuredJSON<RecommendationResponse>({
-      systemPrompt: RECOMMENDATION_SYSTEM_PROMPT,
-      userMessage,
-      temperature: 0.2,
-    });
-  } catch (error) {
-    console.error('AI recommendation generation failed; falling back to deterministic recommendations:', error);
-    return generateDeterministicRecommendations(preferences, properties);
-  }
+  // Always use deterministic engine to ensure mathematically accurate rankings and explanations,
+  // bypassing LLM hallucination of scores and reasons for mismatched properties.
+  return generateDeterministicRecommendations(preferences, properties);
 }

@@ -92,50 +92,24 @@ export default function RecommendationsPage() {
       }
 
       // 3. Enrich recommendations
-      if (recs.length > 0) {
-        const enriched: EnrichedRecommendation[] = recs
-          .map((rec) => {
-            const matchedProp = allProps.find((p) => p.id === rec.propertyId);
-            if (!matchedProp) return null;
-            return {
-              property: matchedProp,
-              rank: rec.rank,
-              matchScore: rec.matchScore,
-              reason: rec.reason,
-            };
-          })
-          .filter(Boolean) as EnrichedRecommendation[];
+      const enriched: EnrichedRecommendation[] = recs
+        .map((rec) => {
+          const matchedProp = allProps.find((p) => p.id === rec.propertyId);
+          if (!matchedProp) return null;
+          return {
+            property: matchedProp,
+            rank: rec.rank,
+            matchScore: rec.matchScore,
+            reason: rec.reason,
+          };
+        })
+        .filter(Boolean) as EnrichedRecommendation[];
 
-        if (enriched.length > 0) {
-          setResults(enriched);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Fallback
-      setResults(
-        demoProperties.slice(0, 3).map((p, i) => ({
-          property: p,
-          rank: i + 1,
-          matchScore: 92 - i * 4,
-          reason: `Matches budget of ₹${budget} and location preferences. Estimated monthly cost is ₹${money(
-            p.cost.estimatedMonthlyCost
-          )}.`,
-        }))
-      );
+      setResults(enriched);
     } catch (err) {
       console.error('Error fetching recommendations:', err);
-      setResults(
-        demoProperties.slice(0, 3).map((p, i) => ({
-          property: p,
-          rank: i + 1,
-          matchScore: 90 - i * 5,
-          reason: `Fulfills bedroom and budget criteria. True monthly cost is estimated at ₹${money(
-            p.cost.estimatedMonthlyCost
-          )}.`,
-        }))
-      );
+      setResults([]);
+      setValidationError('Unable to calculate recommendations. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -247,8 +221,14 @@ export default function RecommendationsPage() {
 
       {/* Ranked property cards */}
       <div className="space-y-4">
-        {results.map(({ property, rank, matchScore, reason }) => {
-          const monthlyEst =
+        {!isLoading && results.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center dark:border-gray-800 dark:bg-gray-900">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">No properties match your current preferences.</h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Try increasing your budget or changing your BHK/furnishing preference.</p>
+          </div>
+        ) : (
+          results.map(({ property, rank, matchScore, reason }) => {
+            const monthlyEst =
             property.costBreakdown?.estimatedMonthlyCost ||
             property.cost?.estimatedMonthlyCost ||
             property.rent + 4000;
@@ -327,7 +307,7 @@ export default function RecommendationsPage() {
               </div>
             </Card>
           );
-        })}
+        }))}
       </div>
     </div>
   );

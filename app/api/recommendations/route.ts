@@ -101,9 +101,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Format properties for the AI recommendation prompt
+    // Format properties and calculate true monthly cost FIRST
     const candidateProperties: CandidatePropertyInput[] = properties.map((p) => {
-      // Use precomputed costBreakdown or fallback to calculating it if missing
       let estimatedMonthlyCost: number | undefined;
       if (p.costBreakdown) {
         estimatedMonthlyCost = p.costBreakdown.estimatedMonthlyCost;
@@ -130,8 +129,23 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // Generate ranked recommendations based ONLY on explicit preferences
-    const aiRecommendations = await generatePropertyRecommendations(preferences, candidateProperties);
+    // Apply hard filtering using TRUE monthly cost
+    let filteredProperties = candidateProperties;
+    
+    if (preferences.budget && preferences.budget > 0) {
+      filteredProperties = filteredProperties.filter(p => p.estimatedMonthlyCost !== undefined && p.estimatedMonthlyCost <= preferences.budget!);
+    }
+    
+    if (preferences.bedrooms !== undefined) {
+      filteredProperties = filteredProperties.filter(p => p.bedrooms === preferences.bedrooms);
+    }
+    
+    if (preferences.furnishing && preferences.furnishing.trim().length > 0) {
+      filteredProperties = filteredProperties.filter(p => p.furnishing.toLowerCase() === preferences.furnishing!.toLowerCase());
+    }
+
+    // Generate ranked recommendations based ONLY on explicitly filtered preferences
+    const aiRecommendations = await generatePropertyRecommendations(preferences, filteredProperties);
 
     return NextResponse.json({
       recommendations: aiRecommendations.recommendations,
