@@ -52,12 +52,15 @@ export async function POST(req: NextRequest) {
     // 2. Fetch Shortlisted Properties
     let candidateProperties: any[] = [];
 
-    if (Array.isArray(body.propertyIds) && body.propertyIds.length > 0) {
-      // User passed specific property IDs to compare
-      candidateProperties = await db.property.findMany({
-        where: { id: { in: body.propertyIds } },
-        include: { costBreakdown: true },
-      });
+    if (Array.isArray(body.propertyIds)) {
+      if (body.propertyIds.length > 0) {
+        candidateProperties = await db.property.findMany({
+          where: { id: { in: body.propertyIds } },
+          include: { costBreakdown: true },
+        });
+      } else {
+        candidateProperties = [];
+      }
     } else {
       // Query shortlisted properties for user from database
       const saved = await db.savedProperty.findMany({
@@ -194,7 +197,9 @@ export async function POST(req: NextRequest) {
         furnishing: effectivePreferences.furnishing,
         location: effectivePreferences.location,
       },
+      userPreferences: effectivePreferences,
       propertyCount: propertyContexts.length,
+      shortlistedCount: propertyContexts.length,
     });
   } catch (error: unknown) {
     console.error('Error in decision assistant API:', error);
