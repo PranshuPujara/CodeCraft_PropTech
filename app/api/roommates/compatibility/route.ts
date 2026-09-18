@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { completeStructuredJSON } from '../../../../lib/ai/client';
+
+export const dynamic = 'force-dynamic';
 import { ROOMMATE_COMPATIBILITY_SYSTEM_PROMPT, buildCompatibilityUserPrompt } from '../../../../lib/ai/prompts/compatibility';
 import { RoommateCompatibilityResponse } from '../../../../lib/ai/types';
 

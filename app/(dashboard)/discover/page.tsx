@@ -1,36 +1,138 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { demoProperties, demoSaved } from '@/lib/demo-data';
+import { demoProperties } from '@/lib/demo-data';
 import { HomeIcon, HeartIcon, HeartOutlineIcon, FilterIcon, SearchIcon } from '@/components/icons';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
+
+interface PropertyItem {
+  id: string;
+  title: string;
+  location: string;
+  rent: number;
+  deposit: number;
+  brokerage: number;
+  furnishing: string;
+  bedrooms: number;
+  bathrooms?: number;
+  commute?: string;
+  amenities: string[];
+  description?: string;
+  costBreakdown?: {
+    estimatedMonthlyCost: number;
+    initialMoveInCost: number;
+    maintenance: number;
+    electricity: number;
+    water: number;
+    internet: number;
+    transport: number;
+    otherRecurring: number;
+  };
+}
 
 export default function DiscoverPage() {
   const [query, setQuery] = useState('');
   const [bedrooms, setBedrooms] = useState('Any');
   const [furnishing, setFurnishing] = useState('Any');
-  const [savedIds, setSavedIds] = useState(demoSaved.map((s) => s.property.id));
+  const [properties, setProperties] = useState<PropertyItem[]>(demoProperties);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const properties = useMemo(
-    () =>
-      demoProperties.filter(
-        (p) =>
-          (p.title + p.location).toLowerCase().includes(query.toLowerCase()) &&
-          (bedrooms === 'Any' || String(p.bedrooms) === bedrooms) &&
-          (furnishing === 'Any' || p.furnishing === furnishing)
-      ),
-    [query, bedrooms, furnishing]
-  );
+  // Fetch properties from backend API
+  const fetchProperties = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (query.trim()) params.set('keyword', query.trim());
+      if (bedrooms !== 'Any') params.set('bedrooms', bedrooms);
+      if (furnishing !== 'Any') params.set('furnishing', furnishing);
 
-  const toggleSave = (id: string) =>
-    setSavedIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]));
+      const res = await fetch(`/api/properties?${params.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.properties) && data.properties.length > 0) {
+          setProperties(data.properties);
+        } else {
+          // If search yielded 0 or filtered out
+          setProperties([]);
+        }
+      }
+    } catch {
+      // Fallback to client filtered demo properties if network error
+      setProperties(
+        demoProperties.filter(
+          (p) =>
+            (p.title + p.location).toLowerCase().includes(query.toLowerCase()) &&
+            (bedrooms === 'Any' || String(p.bedrooms) === bedrooms) &&
+            (furnishing === 'Any' || p.furnishing === furnishing)
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [query, bedrooms, furnishing]);
+
+  // Fetch saved property IDs from backend
+  const fetchSaved = useCallback(async () => {
+    try {
+      const res = await fetch('/api/saved');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.savedProperties)) {
+          setSavedIds(data.savedProperties.map((s: { propertyId: string }) => s.propertyId));
+        }
+      }
+    } catch {
+      // Keep initial
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSaved();
+  }, [fetchSaved]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProperties();
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [fetchProperties]);
+
+  const toggleSave = async (id: string) => {
+    const isCurrentlySaved = savedIds.includes(id);
+    // Optimistic UI update
+    setSavedIds((prev) =>
+      isCurrentlySaved ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+
+    try {
+      if (isCurrentlySaved) {
+        await fetch(`/api/saved?propertyId=${id}`, { method: 'DELETE' });
+      } else {
+        await fetch('/api/saved', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ propertyId: id, isShortlisted: false }),
+        });
+      }
+    } catch (e) {
+      console.error('Error toggling saved state:', e);
+      // Revert if error
+      setSavedIds((prev) =>
+        isCurrentlySaved ? [...prev, id] : prev.filter((i) => i !== id)
+      );
+    }
+  };
+
   const toggleCompare = (id: string) =>
-    setCompareIds((ids) => (ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]));
+    setCompareIds((ids) =>
+      ids.includes(id) ? ids.filter((i) => i !== id) : ids.length < 4 ? [...ids, id] : ids
+    );
 
   return (
     <div className="space-y-6">
@@ -64,7 +166,7 @@ export default function DiscoverPage() {
             onChange={(e) => setBedrooms(e.target.value)}
             className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
           >
-            <option>Any</option>
+            <option value="Any">All BHK</option>
             <option value="1">1 BHK</option>
             <option value="2">2 BHK</option>
             <option value="3">3 BHK</option>
@@ -74,119 +176,135 @@ export default function DiscoverPage() {
             onChange={(e) => setFurnishing(e.target.value)}
             className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
           >
-            <option>Any</option>
-            <option>Furnished</option>
-            <option>Semi-Furnished</option>
-            <option>Unfurnished</option>
+            <option value="Any">All Furnishing</option>
+            <option value="Furnished">Furnished</option>
+            <option value="Semi-Furnished">Semi-Furnished</option>
+            <option value="Unfurnished">Unfurnished</option>
           </select>
-          <button className="flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
-            <FilterIcon className="h-4 w-4" /> Filters
-          </button>
+          <div className="flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 dark:border-gray-700 dark:text-gray-400">
+            <FilterIcon className="h-4 w-4" /> Live DB
+          </div>
         </div>
       </Card>
 
       {/* Results count */}
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        {properties.length} {properties.length === 1 ? 'option' : 'options'} shown
-        · all ongoing costs are estimates unless labelled otherwise.
-      </p>
+      <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+        <p>
+          {isLoading ? 'Searching database...' : `${properties.length} options found in database`}
+          {' · '}all recurring costs calculated by backend cost engine.
+        </p>
+      </div>
 
       {/* Property grid */}
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {properties.map((property) => {
           const isSaved = savedIds.includes(property.id);
           const isCompare = compareIds.includes(property.id);
+          const monthlyEst =
+            property.costBreakdown?.estimatedMonthlyCost ||
+            (property as any).cost?.estimatedMonthlyCost ||
+            property.rent + 4000;
+          const moveInEst =
+            property.costBreakdown?.initialMoveInCost ||
+            (property as any).cost?.initialMoveInCost ||
+            property.deposit + property.brokerage + property.rent;
+
           return (
             <Card key={property.id} className="flex flex-col overflow-hidden">
-              {/* Image area */}
-              <div className="relative flex h-36 items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-750">
-                <HomeIcon className="h-10 w-10 text-gray-300 dark:text-gray-600" />
+              {/* Photo Area */}
+              <div className="relative flex h-44 items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700">
+                <HomeIcon className="h-12 w-12 text-gray-300 dark:text-gray-600" />
                 <button
                   onClick={() => toggleSave(property.id)}
-                  className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full transition ${
-                    isSaved
-                      ? 'bg-rose-50 text-rose-500 dark:bg-rose-900/30 dark:text-rose-400'
-                      : 'bg-white/80 text-gray-400 hover:text-rose-500 dark:bg-gray-800/80'
-                  }`}
+                  className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm backdrop-blur-sm transition hover:scale-110 dark:bg-gray-900/90 dark:text-gray-300"
+                  title={isSaved ? 'Remove from saved' : 'Save property'}
                 >
                   {isSaved ? (
-                    <HeartIcon className="h-4 w-4" />
+                    <HeartIcon className="h-4 w-4 text-rose-500" />
                   ) : (
                     <HeartOutlineIcon className="h-4 w-4" />
                   )}
                 </button>
-                <div className="absolute bottom-3 left-3">
-                  <Badge tone="neutral">{property.furnishing}</Badge>
+                <div className="absolute bottom-3 left-3 flex gap-1.5">
+                  <Badge tone="blue">{property.bedrooms} BHK</Badge>
+                  <Badge tone="blue">{property.furnishing}</Badge>
                 </div>
               </div>
 
               {/* Content */}
               <div className="flex flex-1 flex-col p-4">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  {property.location}
-                </p>
-                <h3 className="mt-1 text-sm font-semibold leading-5 text-gray-900 dark:text-white">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{property.location}</p>
+                <Link
+                  href={`/properties/${property.id}`}
+                  className="mt-0.5 font-semibold text-gray-900 hover:text-emerald-600 dark:text-white dark:hover:text-emerald-400"
+                >
                   {property.title}
-                </h3>
+                </Link>
 
-                {/* Price + affordability */}
-                <div className="mt-3 flex items-end justify-between">
-                  <div>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
+                {/* Costs from Backend Engine */}
+                <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Base rent
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
                       {money(property.rent)}
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                        {' '}/ mo
+                      <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                        /mo
                       </span>
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                      ≈ {money(property.cost.estimatedMonthlyCost)} total{' '}
-                      <span className="text-gray-400 dark:text-gray-500">
-                        estimated
-                      </span>
-                    </p>
+                    </span>
                   </div>
-                  <Badge
-                    tone={
-                      property.cost.affordability.status === 'affordable'
-                        ? 'green'
-                        : property.cost.affordability.status === 'stretch'
-                        ? 'amber'
-                        : 'red'
-                    }
-                  >
-                    {property.cost.affordability.formattedSignal}
-                  </Badge>
+                  <div className="mt-1 flex items-baseline justify-between">
+                    <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                      True monthly
+                    </span>
+                    <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                      ≈ {money(monthlyEst)}
+                      <span className="text-xs font-normal">/mo</span>
+                    </span>
+                  </div>
+                  <div className="mt-1 flex items-baseline justify-between border-t border-gray-200/50 pt-1 text-[11px] text-gray-500 dark:border-gray-700/50 dark:text-gray-400">
+                    <span>Move-in capital</span>
+                    <span>{money(moveInEst)}</span>
+                  </div>
                 </div>
 
                 {/* Amenities */}
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {property.amenities.slice(0, 4).map((a) => (
-                    <span
-                      key={a}
-                      className="rounded-md bg-gray-50 px-2 py-0.5 text-[11px] text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-                    >
-                      {a}
-                    </span>
-                  ))}
-                </div>
+                {Array.isArray(property.amenities) && property.amenities.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {property.amenities.slice(0, 3).map((a) => (
+                      <span
+                        key={a}
+                        className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                      >
+                        {a}
+                      </span>
+                    ))}
+                    {property.amenities.length > 3 && (
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                        +{property.amenities.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
-                <div className="mt-4 flex gap-2 border-t border-gray-100 pt-4 dark:border-gray-700">
+                <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800">
                   <button
                     onClick={() => toggleCompare(property.id)}
-                    className={`flex-1 rounded-lg border py-2 text-xs font-medium transition ${
+                    className={`text-xs font-medium transition ${
                       isCompare
-                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5'
+                        ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
+                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                     }`}
                   >
-                    {isCompare ? '✓ Comparing' : 'Add to compare'}
+                    {isCompare ? '✓ Selected to compare' : '+ Add to compare'}
                   </button>
                   <Link
                     href={`/properties/${property.id}`}
-                    className="flex-1 rounded-lg bg-gray-900 py-2 text-center text-xs font-medium text-white transition hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+                    className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
                   >
-                    View details
+                    View details →
                   </Link>
                 </div>
               </div>
@@ -195,24 +313,33 @@ export default function DiscoverPage() {
         })}
       </div>
 
-      {/* Compare sticky bar */}
+      {/* Sticky comparison bar */}
       {compareIds.length > 0 && (
-        <div className="sticky bottom-4 flex items-center justify-between rounded-xl bg-gray-900 px-5 py-3 text-sm text-white shadow-xl dark:bg-gray-800">
-          <span>
-            {compareIds.length} {compareIds.length === 1 ? 'property' : 'properties'}{' '}
-            selected
-            {compareIds.length < 2 && (
-              <span className="ml-2 text-gray-400">Choose at least 2 to compare.</span>
+        <div className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-2xl border border-gray-200 bg-white/95 px-5 py-3 shadow-xl backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/95">
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              <strong className="text-gray-900 dark:text-white">
+                {compareIds.length}
+              </strong>{' '}
+              {compareIds.length === 1 ? 'property' : 'properties'} selected
+            </span>
+            {compareIds.length >= 2 ? (
+              <Link
+                href={`/compare?ids=${compareIds.join(',')}`}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+              >
+                Compare side-by-side →
+              </Link>
+            ) : (
+              <span className="text-xs text-gray-400">Select at least 2</span>
             )}
-          </span>
-          {compareIds.length >= 2 && (
-            <Link
-              href="/compare"
-              className="rounded-lg bg-emerald-600 px-4 py-1.5 text-sm font-semibold text-white"
+            <button
+              onClick={() => setCompareIds([])}
+              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
             >
-              Compare now →
-            </Link>
-          )}
+              Clear
+            </button>
+          </div>
         </div>
       )}
     </div>

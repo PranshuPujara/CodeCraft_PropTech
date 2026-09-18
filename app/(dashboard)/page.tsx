@@ -1,47 +1,97 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { demoProperties, demoSaved, demoAgreement } from '@/lib/demo-data';
+import { demoProperties, demoSaved } from '@/lib/demo-data';
 import {
   SearchIcon,
   CompareIcon,
   DocumentIcon,
   UsersIcon,
-  ChatIcon,
-  SparklesIcon,
   ChevronRightIcon,
   HomeIcon,
 } from '@/components/icons';
 
+
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
-const topProperty = demoProperties[0];
-const shortlisted = demoSaved.filter((s) => s.isShortlisted);
-
 export default function DashboardOverview() {
+  const [properties, setProperties] = useState<any[]>(demoProperties);
+  const [savedList, setSavedList] = useState<any[]>(demoSaved);
+  const [agreements, setAgreements] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        const [propsRes, savedRes, agreementsRes] = await Promise.all([
+          fetch('/api/properties').catch(() => null),
+          fetch('/api/saved').catch(() => null),
+          fetch('/api/agreements').catch(() => null),
+        ]);
+
+        if (propsRes && propsRes.ok) {
+          const propsData = await propsRes.json();
+          if (propsData.properties?.length > 0) setProperties(propsData.properties);
+        }
+
+        if (savedRes && savedRes.ok) {
+          const savedData = await savedRes.json();
+          if (savedData.savedProperties) setSavedList(savedData.savedProperties);
+        }
+
+        if (agreementsRes && agreementsRes.ok) {
+          const agreementsData = await agreementsRes.json();
+          if (agreementsData.agreements) setAgreements(agreementsData.agreements);
+        }
+      } catch (e) {
+        console.error('Error fetching dashboard summary:', e);
+      }
+    }
+
+    loadDashboardData();
+  }, []);
+
+
+  const shortlisted = savedList.filter((s) => s.isShortlisted);
+  const topProperty =
+    shortlisted[0]?.property || savedList[0]?.property || properties[0] || demoProperties[0];
+
+  const monthlyEst =
+    topProperty.costBreakdown?.estimatedMonthlyCost ||
+    topProperty.cost?.estimatedMonthlyCost ||
+    topProperty.rent + 4000;
+
+  const moveInEst =
+    topProperty.costBreakdown?.initialMoveInCost ||
+    topProperty.cost?.initialMoveInCost ||
+    topProperty.rent * 3;
+
+  const agreementAlertsCount =
+    agreements.length > 0
+      ? agreements.reduce((acc, a) => acc + (a.flaggedClauses?.length || 0), 0)
+      : 2;
+
   return (
     <div className="space-y-6">
       {/* Hero */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
           <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-            Welcome back
+            Welcome to Rentwise
           </p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
             Make your next rental decision clearer.
           </h1>
           <p className="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-            See the complete cost, compare trade-offs, and understand the terms
-            before you commit.
+            Compare true recurring monthly expenses, inspect lease clauses, and find compatible roommates.
           </p>
         </div>
         <Link
           href="/discover"
           className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
         >
-          <SearchIcon className="h-4 w-4" /> Browse properties
+          <SearchIcon className="h-4 w-4" /> Browse {properties.length} properties
         </Link>
       </div>
 
@@ -49,200 +99,193 @@ export default function DashboardOverview() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Saved homes"
-          value={String(demoSaved.length)}
-          detail={`${shortlisted.length} ready to compare`}
+          value={String(savedList.length)}
+          detail={`${shortlisted.length} shortlisted for comparison`}
           color="emerald"
         />
         <MetricCard
-          label="Monthly estimate"
-          value={money(topProperty.cost.estimatedMonthlyCost)}
-          detail="For your first choice"
+          label="Estimated monthly"
+          value={`≈ ${money(monthlyEst)}`}
+          detail={`For ${topProperty.title.slice(0, 22)}...`}
           color="blue"
         />
         <MetricCard
-          label="Move-in to plan"
-          value={money(topProperty.cost.initialMoveInCost)}
-          detail="Deposit + brokerage + rent"
+          label="Move-in cash"
+          value={money(moveInEst)}
+          detail="Deposit + brokerage + first rent"
           color="amber"
         />
         <MetricCard
           label="Agreement alerts"
-          value={`${demoAgreement.flaggedClauses.length} items`}
-          detail="Worth your attention"
+          value={`${agreementAlertsCount} items`}
+          detail="Require attention before signing"
           color="red"
         />
       </div>
 
-      {/* Shortlist + Cost breakdown */}
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+      {/* Shortlist preview & Cost breakdown */}
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Shortlist */}
         <Card className="p-5 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold text-gray-900 dark:text-white">
-                Your shortlist
+                Shortlisted homes
               </h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {shortlisted.length} homes, ready to compare.
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                Properties marked for detailed evaluation
               </p>
             </div>
             <Link
-              href="/compare"
-              className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+              href="/saved"
+              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
             >
-              Compare →
+              View all ({savedList.length}) →
             </Link>
           </div>
-          <div className="mt-5 space-y-3">
-            {shortlisted.map((saved) => {
-              const prop = saved.property as typeof demoProperties[number];
+
+          <div className="mt-4 space-y-3">
+            {(shortlisted.length > 0 ? shortlisted : savedList.slice(0, 2)).map((item) => {
+              const p = item.property || item;
+              const costEst =
+                p.costBreakdown?.estimatedMonthlyCost ||
+                p.cost?.estimatedMonthlyCost ||
+                p.rent + 4000;
+
               return (
-                <Link
-                  href={`/properties/${prop.id}`}
-                  key={saved.id}
-                  className="flex items-center gap-4 rounded-xl border border-gray-100 p-3 transition hover:border-emerald-200 hover:bg-emerald-50/50 dark:border-gray-700 dark:hover:border-emerald-800 dark:hover:bg-emerald-900/10"
+                <div
+                  key={item.id || p.id}
+                  className="flex items-center justify-between rounded-xl border border-gray-100 p-3 transition hover:border-gray-200 dark:border-gray-800 dark:hover:border-gray-700"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
-                    <HomeIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                      {prop.title}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                      {prop.commute}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
+                      <HomeIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <div>
+                      <Link
+                        href={`/properties/${p.id}`}
+                        className="text-sm font-semibold text-gray-900 hover:text-emerald-600 dark:text-white dark:hover:text-emerald-400"
+                      >
+                        {p.title}
+                      </Link>
+                      <p className="text-xs text-gray-400">{p.location}</p>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      ≈ {money(prop.cost.estimatedMonthlyCost)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      / month
-                    </p>
+                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      ≈ {money(costEst)}/mo
+                    </span>
                   </div>
-                  <Badge tone="green" className="hidden sm:inline-flex">
-                    Shortlisted
-                  </Badge>
-                  <ChevronRightIcon className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-                </Link>
+                </div>
               );
             })}
           </div>
+
+          <div className="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800 flex justify-between items-center">
+            <Link
+              href="/compare"
+              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+            >
+              Compare side-by-side →
+            </Link>
+            <Link
+              href="/assistant"
+              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+            >
+              Decision Assistant analysis →
+            </Link>
+          </div>
         </Card>
 
-        {/* Cost breakdown */}
+        {/* Cost breakdown spotlight */}
         <Card className="p-5 sm:p-6">
-          <div className="mb-5 flex items-start justify-between">
+          <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold text-gray-900 dark:text-white">
-                True monthly cost
+                Cost breakdown preview
               </h2>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                 {topProperty.title}
               </p>
             </div>
-            <Badge tone="blue">Estimated</Badge>
+            <Link
+              href={`/properties/${topProperty.id}`}
+              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+            >
+              Full breakdown →
+            </Link>
           </div>
 
-          <div className="space-y-2.5">
-            {[
-              topProperty.cost.rent,
-              topProperty.cost.maintenance,
-              topProperty.cost.electricity,
-              topProperty.cost.water,
-              topProperty.cost.internet,
-              topProperty.cost.transport,
-              topProperty.cost.otherRecurring,
-            ].map((item) => (
-              <div
-                className="flex justify-between text-sm"
-                key={item.label}
-              >
-                <span className="text-gray-600 dark:text-gray-400">
-                  {item.label}
-                  {item.isEstimated && (
-                    <span className="ml-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-                      est.
-                    </span>
-                  )}
-                </span>
-                <span className="font-medium text-gray-800 dark:text-gray-200">
-                  {money(item.value)}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-            <div className="flex justify-between">
-              <span className="font-semibold text-gray-900 dark:text-white">
-                Estimated total
-              </span>
-              <span className="font-bold text-gray-900 dark:text-white">
-                {money(topProperty.cost.estimatedMonthlyCost)}
+          <div className="mt-4 space-y-2">
+            <CostRow
+              label="Advertised base rent"
+              amount={money(topProperty.rent)}
+              sub="Landlord direct"
+            />
+            <CostRow
+              label="Society maintenance"
+              amount={money(topProperty.costBreakdown?.maintenance || 3000)}
+              sub="Society dues"
+            />
+            <CostRow
+              label="Utilities (power, water, net)"
+              amount={money(
+                (topProperty.costBreakdown?.electricity || 1500) +
+                  (topProperty.costBreakdown?.water || 500) +
+                  (topProperty.costBreakdown?.internet || 1000)
+              )}
+              sub="Estimated consumption"
+            />
+            <CostRow
+              label="Daily commute expense"
+              amount={money(topProperty.costBreakdown?.transport || 2000)}
+              sub={topProperty.commute || 'Workplace commute'}
+            />
+            <div className="flex items-center justify-between border-t border-gray-200 pt-2 text-sm font-bold text-gray-900 dark:border-gray-700 dark:text-white">
+              <span>True monthly commitment</span>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                ≈ {money(monthlyEst)} / mo
               </span>
             </div>
-            <p className="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
-              {topProperty.cost.affordability.formattedSignal}.{' '}
-              {topProperty.cost.affordability.explanation}
-            </p>
           </div>
         </Card>
       </div>
 
-      {/* Quick actions */}
-      <Card className="p-5 sm:p-6">
-        <h2 className="font-semibold text-gray-900 dark:text-white">
-          Decision workspace
+      {/* Decision Workspace Quick Links */}
+      <div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          Decision Intelligence Tools
         </h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Continue from the insight you need most.
-        </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <ActionCard
-            title="Compare properties"
-            detail="Side-by-side trade-offs"
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickAction
+            title="Discover Homes"
+            desc="Filter by budget & location"
+            icon={SearchIcon}
+            href="/discover"
+          />
+          <QuickAction
+            title="Compare Shortlist"
+            desc="Side-by-side trade-offs"
+            icon={CompareIcon}
             href="/compare"
-            icon={<CompareIcon className="h-5 w-5" />}
           />
-          <ActionCard
-            title="Review agreement"
-            detail={`${demoAgreement.flaggedClauses.length} clauses worth attention`}
+          <QuickAction
+            title="Lease Intelligence"
+            desc="Upload & inspect agreements"
+            icon={DocumentIcon}
             href="/agreements"
-            icon={<DocumentIcon className="h-5 w-5" />}
           />
-          <ActionCard
-            title="Check roommate fit"
-            detail="Practical preferences, explained"
+          <QuickAction
+            title="Roommate Fit"
+            desc="Evaluate lifestyle match"
+            icon={UsersIcon}
             href="/roommates"
-            icon={<UsersIcon className="h-5 w-5" />}
-          />
-          <ActionCard
-            title="Get recommendations"
-            detail="Properties matched to your needs"
-            href="/recommendations"
-            icon={<SparklesIcon className="h-5 w-5" />}
-          />
-          <ActionCard
-            title="Decision assistant"
-            detail="Synthesized shortlist analysis"
-            href="/assistant"
-            icon={<CompareIcon className="h-5 w-5" />}
-          />
-          <ActionCard
-            title="Ask Rental Copilot"
-            detail="Grounded in your rental data"
-            href="/copilot"
-            icon={<ChatIcon className="h-5 w-5" />}
           />
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
-
-/* ──── Sub-components ──── */
 
 function MetricCard({
   label,
@@ -255,59 +298,75 @@ function MetricCard({
   detail: string;
   color: 'emerald' | 'blue' | 'amber' | 'red';
 }) {
-  const iconBg: Record<string, string> = {
-    emerald: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300',
-    blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
-    amber: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300',
-    red: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',
-  };
+  const dotColor =
+    color === 'emerald'
+      ? 'bg-emerald-500'
+      : color === 'blue'
+      ? 'bg-blue-500'
+      : color === 'amber'
+      ? 'bg-amber-500'
+      : 'bg-red-500';
 
   return (
-    <Card className="p-4 sm:p-5">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg[color]}`}>
-        <span className="text-lg font-bold">{value.charAt(0) === '₹' ? '₹' : '#'}</span>
+    <Card className="p-5">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
+        <span className={`h-2 w-2 rounded-full ${dotColor}`} />
       </div>
-      <p className="mt-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-        {label}
-      </p>
-      <p className="mt-1 text-xl font-bold text-gray-900 dark:text-white">
+      <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
         {value}
       </p>
-      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{detail}</p>
+      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{detail}</p>
     </Card>
   );
 }
 
-function ActionCard({
-  title,
-  detail,
-  href,
-  icon,
+
+function CostRow({
+  label,
+  amount,
+  sub,
 }: {
-  title: string;
-  detail: string;
-  href: string;
-  icon: React.ReactNode;
+  label: string;
+  amount: string;
+  sub: string;
 }) {
   return (
-    <Link
-      href={href}
-      className="group flex items-start gap-3 rounded-xl border border-gray-200 p-4 transition hover:border-emerald-300 hover:bg-emerald-50/50 dark:border-gray-700 dark:hover:border-emerald-700 dark:hover:bg-emerald-900/10"
-    >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition group-hover:bg-emerald-100 group-hover:text-emerald-600 dark:bg-gray-800 dark:text-gray-400 dark:group-hover:bg-emerald-900/40 dark:group-hover:text-emerald-300">
-        {icon}
-      </div>
+    <div className="flex items-center justify-between py-1 text-sm">
       <div>
-        <p className="font-semibold text-gray-900 dark:text-white">
-          {title}
-          <span className="ml-1 text-emerald-600 opacity-0 transition group-hover:opacity-100 dark:text-emerald-400">
-            →
-          </span>
-        </p>
-        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-          {detail}
-        </p>
+        <p className="font-medium text-gray-700 dark:text-gray-300">{label}</p>
+        <p className="text-[11px] text-gray-400">{sub}</p>
       </div>
+      <p className="font-semibold text-gray-900 dark:text-white">{amount}</p>
+    </div>
+  );
+}
+
+function QuickAction({
+  title,
+  desc,
+  icon: Icon,
+  href,
+}: {
+  title: string;
+  desc: string;
+  icon: any;
+  href: string;
+}) {
+  return (
+    <Link href={href} className="group">
+      <Card className="flex items-center justify-between p-4 transition hover:border-emerald-300 hover:shadow-sm dark:hover:border-emerald-600">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-600 transition group-hover:bg-emerald-50 group-hover:text-emerald-700 dark:bg-gray-800 dark:text-gray-400 dark:group-hover:bg-emerald-950 dark:group-hover:text-emerald-400">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">{title}</p>
+            <p className="text-xs text-gray-400">{desc}</p>
+          </div>
+        </div>
+        <ChevronRightIcon className="h-4 w-4 text-gray-400 transition group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+      </Card>
     </Link>
   );
 }

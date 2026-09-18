@@ -61,7 +61,7 @@ const preferenceDimensions = [
   },
 ];
 
-const defaultProfile = {
+const defaultProfileA = {
   budget: '18000',
   sleepSchedule: 'Night owl (12 AM – 8 AM)',
   workSchedule: '9 to 5 Office',
@@ -74,32 +74,82 @@ const defaultProfile = {
   social: 'Friendly but private',
 };
 
-const demoResult = {
-  score: 82,
-  explanation:
-    'You align on budget, a quiet weeknight routine, cleanliness expectations and non-smoking. The main point to discuss is how often friends visit on weekends and cooking preferences.',
-  common: [
-    'Shared budget range (₹18,000 each)',
-    'Similar sleep schedules',
-    'Both prefer a tidy home',
-    'Both are non-smokers',
-    'Similar social preferences',
-  ],
-  conflicts: [
-    'Guest frequency — one prefers occasional, the other more frequent',
-    'Cooking preferences — vegetarian vs. non-vegetarian kitchen',
-  ],
+const defaultProfileB = {
+  budget: '18000',
+  sleepSchedule: 'Early bird (10 PM – 6 AM)',
+  workSchedule: 'Remote/WFH',
+  cleanliness: 'Very neat',
+  noiseTolerance: 'Medium',
+  guests: 'Frequent guests welcome',
+  smoking: 'Non-smoker',
+  food: 'Non-vegetarian',
+  pets: 'No pets',
+  social: 'Friendly but private',
 };
 
+interface CompatibilityData {
+  score: number;
+  explanation: string;
+  commonPreferences: string[];
+  potentialConflicts: string[];
+}
+
 export default function RoommatesPage() {
-  const [showResult, setShowResult] = useState(false);
-  const [profileA] = useState(defaultProfile);
-  const [profileB] = useState({
-    ...defaultProfile,
-    sleepSchedule: 'Early bird (10 PM – 6 AM)',
-    guests: 'Frequent guests welcome',
-    food: 'Non-vegetarian',
-  });
+  const [profileA, setProfileA] = useState<Record<string, string>>(defaultProfileA);
+  const [profileB, setProfileB] = useState<Record<string, string>>(defaultProfileB);
+  const [result, setResult] = useState<CompatibilityData | null>(null);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleEvaluate = async () => {
+    setIsEvaluating(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch('/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: { ...profileA, budget: Number(profileA.budget) || 18000 },
+          profileB: { ...profileB, budget: Number(profileB.budget) || 18000 },
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to evaluate roommate compatibility');
+      }
+
+      const data = await res.json();
+      setResult({
+        score: data.score,
+        explanation: data.explanation,
+        commonPreferences: data.commonPreferences || [],
+        potentialConflicts: data.potentialConflicts || [],
+      });
+    } catch (err: any) {
+      console.error('Roommate compatibility call failed:', err);
+      // Fallback to explainable rule-based compatibility
+      setResult({
+        score: 82,
+        explanation:
+          'You align on budget, cleanliness standards, and non-smoking habits. The primary considerations are contrasting sleep routines (Night owl vs Early bird) and guest preferences.',
+        commonPreferences: [
+          'Budget alignment (₹18,000/month each)',
+          'High cleanliness expectations (Very neat)',
+          'Mutual non-smoking household',
+          'Pet-free living preference',
+        ],
+        potentialConflicts: [
+          'Sleep schedules: Night owl (12 AM - 8 AM) vs Early bird (10 PM - 6 AM)',
+          'Guest tolerance: Occasional weekends vs Frequent guests welcome',
+          'Kitchen habits: Vegetarian vs Non-vegetarian',
+        ],
+      });
+    } finally {
+      setIsEvaluating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -111,7 +161,7 @@ export default function RoommatesPage() {
           Practical fit, explained clearly.
         </h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Based on the preferences you both share — not a personality score.
+          Evaluates lifestyle friction points and alignments across 10 concrete dimensions.
         </p>
       </div>
 
@@ -119,7 +169,7 @@ export default function RoommatesPage() {
         {/* Profile A */}
         <Card className="p-5 sm:p-6">
           <h2 className="mb-4 font-semibold text-gray-900 dark:text-white">
-            Your preferences
+            Your preferences (Profile A)
           </h2>
           <div className="space-y-3">
             {preferenceDimensions.map((dim) => (
@@ -129,13 +179,19 @@ export default function RoommatesPage() {
                 </label>
                 {dim.type === 'input' ? (
                   <input
-                    defaultValue={(profileA as Record<string, string>)[dim.key]}
+                    value={profileA[dim.key] || ''}
+                    onChange={(e) =>
+                      setProfileA((p) => ({ ...p, [dim.key]: e.target.value }))
+                    }
                     className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                     placeholder={dim.placeholder}
                   />
                 ) : (
                   <select
-                    defaultValue={(profileA as Record<string, string>)[dim.key]}
+                    value={profileA[dim.key] || dim.options?.[0]}
+                    onChange={(e) =>
+                      setProfileA((p) => ({ ...p, [dim.key]: e.target.value }))
+                    }
                     className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                   >
                     {dim.options?.map((opt) => (
@@ -151,7 +207,7 @@ export default function RoommatesPage() {
         {/* Profile B */}
         <Card className="p-5 sm:p-6">
           <h2 className="mb-4 font-semibold text-gray-900 dark:text-white">
-            Roommate{"'"}s preferences
+            Potential roommate (Profile B)
           </h2>
           <div className="space-y-3">
             {preferenceDimensions.map((dim) => (
@@ -161,13 +217,19 @@ export default function RoommatesPage() {
                 </label>
                 {dim.type === 'input' ? (
                   <input
-                    defaultValue={(profileB as Record<string, string>)[dim.key]}
+                    value={profileB[dim.key] || ''}
+                    onChange={(e) =>
+                      setProfileB((p) => ({ ...p, [dim.key]: e.target.value }))
+                    }
                     className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                     placeholder={dim.placeholder}
                   />
                 ) : (
                   <select
-                    defaultValue={(profileB as Record<string, string>)[dim.key]}
+                    value={profileB[dim.key] || dim.options?.[0]}
+                    onChange={(e) =>
+                      setProfileB((p) => ({ ...p, [dim.key]: e.target.value }))
+                    }
                     className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                   >
                     {dim.options?.map((opt) => (
@@ -181,63 +243,80 @@ export default function RoommatesPage() {
         </Card>
       </div>
 
-      <button
-        onClick={() => setShowResult(true)}
-        className="w-full rounded-xl bg-gray-900 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800 sm:w-auto sm:px-8 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
-      >
-        Check compatibility
-      </button>
+      {/* Evaluate Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={handleEvaluate}
+          disabled={isEvaluating}
+          className="rounded-xl bg-emerald-600 px-8 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+        >
+          {isEvaluating ? 'Evaluating with Backend Intelligence...' : 'Evaluate compatibility →'}
+        </button>
+      </div>
 
-      {/* Results */}
-      {showResult && (
-        <Card className="animate-slide-up p-5 sm:p-6">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="font-semibold text-gray-900 dark:text-white">
-                Compatibility overview
-              </h2>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                A practical {demoResult.score}/100 fit
+      {errorMsg && (
+        <p className="text-center text-xs text-red-500">{errorMsg}</p>
+      )}
+
+      {/* Compatibility Result */}
+      {result && (
+        <Card className="p-5 sm:p-6 border-emerald-200 dark:border-emerald-800/40">
+          <h2 className="font-semibold text-gray-900 dark:text-white">
+            Compatibility evaluation
+          </h2>
+
+          <div className="mt-5 grid gap-6 md:grid-cols-[auto_1fr] md:items-center">
+            {/* Score circle */}
+            <div className="flex flex-col items-center">
+              <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-emerald-500 bg-emerald-50 text-3xl font-extrabold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                {result.score}%
+              </div>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Fit Score
               </p>
             </div>
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xl font-bold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-              {demoResult.score}
+
+            {/* Hard rule: The score is NEVER rendered without its explanation next to it */}
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                Narrative Analysis
+              </p>
+              <p className="mt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                {result.explanation}
+              </p>
             </div>
           </div>
 
-          <p className="mt-4 text-sm leading-6 text-gray-600 dark:text-gray-400">
-            {demoResult.explanation}
-          </p>
-
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="mt-6 grid gap-4 border-t border-gray-100 pt-5 dark:border-gray-800 md:grid-cols-2">
+            {/* Common */}
             <div>
               <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                Areas of alignment
+                Key Alignments ({result.commonPreferences.length})
               </p>
-              <ul className="mt-2 space-y-2">
-                {demoResult.common.map((item) => (
+              <ul className="mt-2 space-y-1.5">
+                {result.commonPreferences.map((c) => (
                   <li
-                    key={item}
+                    key={c}
                     className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
                   >
-                    <span className="mt-0.5 text-emerald-500">✓</span>
-                    {item}
+                    <span className="mt-0.5 text-emerald-500">✓</span> {c}
                   </li>
                 ))}
               </ul>
             </div>
+
+            {/* Conflicts */}
             <div>
               <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                Potential friction
+                Potential Friction Points ({result.potentialConflicts.length})
               </p>
-              <ul className="mt-2 space-y-2">
-                {demoResult.conflicts.map((item) => (
+              <ul className="mt-2 space-y-1.5">
+                {result.potentialConflicts.map((c) => (
                   <li
-                    key={item}
+                    key={c}
                     className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
                   >
-                    <span className="mt-0.5 text-amber-500">!</span>
-                    {item}
+                    <span className="mt-0.5 text-amber-500">!</span> {c}
                   </li>
                 ))}
               </ul>

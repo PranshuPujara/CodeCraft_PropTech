@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
+
+export const dynamic = 'force-dynamic';
 import { extractTextFromPDF } from '../../../lib/agreementPdf';
 import { completeStructuredJSON } from '../../../lib/ai/client';
 import { AGREEMENT_EXTRACTION_SYSTEM_PROMPT } from '../../../lib/ai/prompts/agreementExtract';
@@ -72,3 +74,47 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function GET() {
+  try {
+    const agreements = await db.agreement.findMany({
+      where: { userId: 'demo-user-1' },
+      orderBy: { uploadedAt: 'desc' },
+    });
+
+    const parsed = agreements.map((a) => {
+      let extractedFields = {};
+      let flaggedClauses = [];
+      try {
+        extractedFields = JSON.parse(a.extractedFields);
+      } catch {
+        extractedFields = {};
+      }
+      try {
+        flaggedClauses = JSON.parse(a.flaggedClauses);
+      } catch {
+        flaggedClauses = [];
+      }
+
+      return {
+        id: a.id,
+        fileName: a.fileName,
+        uploadedAt: a.uploadedAt,
+        propertyId: a.propertyId,
+        summary: a.summary,
+        extractedFields,
+        flaggedClauses,
+      };
+    });
+
+    return NextResponse.json({ agreements: parsed, count: parsed.length });
+  } catch (error) {
+    console.error('Error fetching agreements:', error);
+    const message = error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json(
+      { error: 'Failed to fetch agreements', details: message },
+      { status: 500 }
+    );
+  }
+}
+

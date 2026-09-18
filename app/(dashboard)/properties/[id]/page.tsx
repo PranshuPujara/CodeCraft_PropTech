@@ -1,15 +1,123 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { demoProperties } from '@/lib/demo-data';
-import { HomeIcon } from '@/components/icons';
+import { HomeIcon, HeartIcon, HeartOutlineIcon } from '@/components/icons';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
+interface CostItem {
+  value: number;
+  isEstimated: boolean;
+  label: string;
+}
+
+interface CostResponse {
+  propertyId: string;
+  rent: CostItem;
+  maintenance: CostItem;
+  electricity: CostItem;
+  water: CostItem;
+  internet: CostItem;
+  transport: CostItem;
+  otherRecurring: CostItem;
+  estimatedMonthlyCost: number;
+  deposit: CostItem;
+  brokerage: CostItem;
+  firstMonthRent: CostItem;
+  initialMoveInCost: number;
+  isAnyEstimated: boolean;
+  affordability: {
+    ratio: number;
+    percentage: number;
+    formattedSignal: string;
+    status: 'comfortable' | 'moderate' | 'stretch' | 'over_budget';
+    explanation: string;
+  };
+}
+
 export default function PropertyDetailPage({ params }: { params: { id: string } }) {
-  const property = demoProperties.find((p) => p.id === params.id);
+  const [property, setProperty] = useState<any>(null);
+  const [cost, setCost] = useState<CostResponse | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        // 1. Fetch Property Details
+        const propRes = await fetch(`/api/properties/${params.id}`);
+        if (propRes.ok) {
+          const propData = await propRes.json();
+          setProperty(propData.property);
+        } else {
+          // Fallback to demo properties
+          const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
+          setProperty(fallback);
+        }
+
+        // 2. Fetch True Cost from Backend Cost Engine
+        const costRes = await fetch(`/api/properties/${params.id}/cost?budget=35000`);
+        if (costRes.ok) {
+          const costData = await costRes.json();
+          setCost(costData);
+        } else {
+          const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
+          setCost(fallback.cost as any);
+        }
+
+        // 3. Check saved state
+        const savedRes = await fetch('/api/saved');
+        if (savedRes.ok) {
+          const savedData = await savedRes.json();
+          if (Array.isArray(savedData.savedProperties)) {
+            setIsSaved(savedData.savedProperties.some((s: any) => s.propertyId === params.id));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load property data:', err);
+        const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
+        setProperty(fallback);
+        setCost(fallback.cost as any);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, [params.id]);
+
+  const toggleSave = async () => {
+    if (!property) return;
+    const nextState = !isSaved;
+    setIsSaved(nextState);
+    try {
+      if (!nextState) {
+        await fetch(`/api/saved?propertyId=${property.id}`, { method: 'DELETE' });
+      } else {
+        await fetch('/api/saved', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ propertyId: property.id, isShortlisted: false }),
+        });
+      }
+    } catch {
+      setIsSaved(!nextState);
+    }
+  };
+
+  if (isLoading && !property) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <p className="mt-4 text-sm text-gray-500">Loading property intelligence...</p>
+      </div>
+    );
+  }
 
   if (!property) {
     return (
@@ -22,20 +130,21 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
     );
   }
 
-  const monthlyItems = [
-    property.cost.rent,
-    property.cost.maintenance,
-    property.cost.electricity,
-    property.cost.water,
-    property.cost.internet,
-    property.cost.transport,
-    property.cost.otherRecurring,
-  ];
-  const moveInItems = [
-    property.cost.deposit,
-    property.cost.brokerage,
-    property.cost.firstMonthRent,
-  ];
+  const monthlyItems = cost
+    ? [
+        cost.rent,
+        cost.maintenance,
+        cost.electricity,
+        cost.water,
+        cost.internet,
+        cost.transport,
+        cost.otherRecurring,
+      ]
+    : [];
+
+  const moveInItems = cost
+    ? [cost.deposit, cost.brokerage, cost.firstMonthRent]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -68,19 +177,28 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                   {property.description}
                 </p>
               </div>
-              <button className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">
-                ♡ Save property
+              <button
+                onClick={toggleSave}
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                {isSaved ? (
+                  <>
+                    <HeartIcon className="h-4 w-4 text-rose-500" /> Saved
+                  </>
+                ) : (
+                  <>
+                    <HeartOutlineIcon className="h-4 w-4" /> Save property
+                  </>
+                )}
               </button>
             </div>
 
             {/* Badges */}
             <div className="mt-5 flex flex-wrap gap-2">
-              <Badge tone="blue">{property.bedrooms} bedrooms</Badge>
-              <Badge tone="blue">{property.bathrooms ?? 1} bathrooms</Badge>
+              <Badge tone="blue">{property.bedrooms} BHK</Badge>
               <Badge tone="blue">{property.furnishing}</Badge>
-              {property.amenities.map((a) => (
-                <Badge key={a}>{a}</Badge>
-              ))}
+              {Array.isArray(property.amenities) &&
+                property.amenities.map((a: string) => <Badge key={a}>{a}</Badge>)}
             </div>
 
             {/* Commute info */}
@@ -101,103 +219,105 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
             </p>
             <p className="mt-1 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
               {money(property.rent)}
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                {' '}/ month
+              <span className="text-base font-normal text-gray-500 dark:text-gray-400">
+                {' '}
+                / month
               </span>
             </p>
           </Card>
 
           {/* True monthly cost */}
-          <Card className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="font-semibold text-gray-900 dark:text-white">
-                  True monthly cost
-                </h2>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Recurring costs, itemised
-                </p>
-              </div>
-              <Badge tone="blue">Estimated</Badge>
-            </div>
-            <dl className="mt-5 space-y-3">
-              {monthlyItems.map((item) => (
-                <div className="flex justify-between text-sm" key={item.label}>
-                  <dt className="text-gray-600 dark:text-gray-400">
-                    {item.label}
-                    {item.isEstimated && (
-                      <span className="ml-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-                        est.
-                      </span>
-                    )}
-                  </dt>
-                  <dd className="font-medium text-gray-800 dark:text-gray-200">
-                    {money(item.value)}
-                  </dd>
+          {cost && (
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-gray-900 dark:text-white">
+                    Estimated true monthly cost
+                  </h2>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    What you will actually spend each month
+                  </p>
                 </div>
-              ))}
-            </dl>
-            <div className="mt-5 border-t border-gray-200 pt-4 dark:border-gray-700">
-              <div className="flex justify-between">
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  Estimated monthly total
-                </span>
-                <span className="font-bold text-gray-900 dark:text-white">
-                  {money(property.cost.estimatedMonthlyCost)}
-                </span>
+                <Badge tone="blue">≈ {money(cost.estimatedMonthlyCost)}</Badge>
               </div>
-              <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800">
-                <p className="text-xs leading-5 text-gray-600 dark:text-gray-400">
-                  <Badge
-                    tone={
-                      property.cost.affordability.status === 'affordable'
-                        ? 'green'
-                        : property.cost.affordability.status === 'stretch'
-                        ? 'amber'
-                        : 'red'
-                    }
-                    className="mr-2"
-                  >
-                    {property.cost.affordability.formattedSignal}
-                  </Badge>
-                  {property.cost.affordability.explanation}
-                </p>
+
+              <div className="mt-4 space-y-2.5 border-t border-gray-100 pt-4 dark:border-gray-800">
+                {monthlyItems.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {item.label}
+                      {item.isEstimated && (
+                        <span
+                          className="ml-1 text-[11px] text-amber-600 dark:text-amber-400"
+                          title="Estimated consumption figure"
+                        >
+                          (est.)
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {money(item.value)}
+                    </span>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-sm font-bold text-gray-900 dark:border-gray-700 dark:text-white">
+                  <span>Total monthly</span>
+                  <span>≈ {money(cost.estimatedMonthlyCost)} / mo</span>
+                </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Move-in cost */}
-          <Card className="p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="font-semibold text-gray-900 dark:text-white">
-                  Initial move-in cost
-                </h2>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  One-time payments to plan for
-                </p>
-              </div>
-              <Badge>Exact values</Badge>
-            </div>
-            <dl className="mt-5 space-y-3">
-              {moveInItems.map((item) => (
-                <div className="flex justify-between text-sm" key={item.label}>
-                  <dt className="text-gray-600 dark:text-gray-400">{item.label}</dt>
-                  <dd className="font-medium text-gray-800 dark:text-gray-200">
-                    {money(item.value)}
-                  </dd>
+          {cost && (
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-gray-900 dark:text-white">
+                    Initial move-in cost
+                  </h2>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    Cash required before you get the keys
+                  </p>
                 </div>
-              ))}
-            </dl>
-            <div className="mt-5 flex justify-between border-t border-gray-200 pt-4 dark:border-gray-700">
-              <span className="font-semibold text-gray-900 dark:text-white">
-                Total to move in
-              </span>
-              <span className="font-bold text-gray-900 dark:text-white">
-                {money(property.cost.initialMoveInCost)}
-              </span>
-            </div>
-          </Card>
+                <Badge tone="amber">{money(cost.initialMoveInCost)}</Badge>
+              </div>
+
+              <div className="mt-4 space-y-2.5 border-t border-gray-100 pt-4 dark:border-gray-800">
+                {moveInItems.map((item) => (
+                  <div key={item.label} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">{item.label}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {money(item.value)}
+                    </span>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-sm font-bold text-gray-900 dark:border-gray-700 dark:text-white">
+                  <span>Total move-in cash</span>
+                  <span>{money(cost.initialMoveInCost)}</span>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Affordability signal from backend engine */}
+          {cost?.affordability && (
+            <Card className="border-emerald-200 bg-emerald-50/40 p-5 dark:border-emerald-800/40 dark:bg-emerald-950/20">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                  Affordability Signal
+                </span>
+                <Badge tone={cost.affordability.status === 'comfortable' ? 'green' : 'amber'}>
+                  {cost.affordability.formattedSignal}
+                </Badge>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-gray-600 dark:text-gray-400">
+                {cost.affordability.explanation}
+              </p>
+            </Card>
+          )}
         </div>
       </div>
     </div>

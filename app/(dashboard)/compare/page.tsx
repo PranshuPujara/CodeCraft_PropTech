@@ -1,37 +1,179 @@
 'use client';
 
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { demoProperties } from '@/lib/demo-data';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
-export default function ComparePage() {
-  // Default to first two properties for demo
-  const comparable = demoProperties.slice(0, 2);
-  const lowest = [...comparable].sort(
-    (a, b) => a.cost.estimatedMonthlyCost - b.cost.estimatedMonthlyCost
-  )[0];
-  const fastest = [...comparable].sort(
-    (a, b) => parseInt(a.commute ?? '99') - parseInt(b.commute ?? '99')
-  )[0];
-  const costDiff = Math.abs(
-    comparable[0].cost.estimatedMonthlyCost - comparable[1].cost.estimatedMonthlyCost
-  );
+interface ComparedProperty {
+  id: string;
+  title: string;
+  location: string;
+  rent: number;
+  deposit: number;
+  bedrooms: number;
+  bathrooms?: number;
+  furnishing: string;
+  commute?: string;
+  amenities: string[];
+  costBreakdown?: {
+    estimatedMonthlyCost: number;
+    initialMoveInCost: number;
+    affordability?: {
+      formattedSignal: string;
+      status: string;
+    };
+  };
+}
+
+interface TradeOff {
+  dimension: string;
+  propertyAId: string;
+  propertyBId: string;
+  statement: string;
+}
+
+function CompareContent() {
+  const searchParams = useSearchParams();
+  const [properties, setProperties] = useState<ComparedProperty[]>([]);
+  const [tradeoffs, setTradeoffs] = useState<TradeOff[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadComparison() {
+      setIsLoading(true);
+      try {
+        let propertyIds: string[] = [];
+        const idsParam = searchParams.get('ids');
+
+        if (idsParam) {
+          propertyIds = idsParam.split(',').map((s) => s.trim()).filter(Boolean);
+        } else {
+          // Fetch shortlisted/saved properties first
+          const savedRes = await fetch('/api/saved');
+          if (savedRes.ok) {
+            const savedData = await savedRes.json();
+            const shortlisted = savedData.savedProperties?.filter((s: any) => s.isShortlisted);
+            if (shortlisted && shortlisted.length >= 2) {
+              propertyIds = shortlisted.map((s: any) => s.propertyId);
+            } else if (savedData.savedProperties?.length >= 2) {
+              propertyIds = savedData.savedProperties.slice(0, 2).map((s: any) => s.propertyId);
+            }
+          }
+        }
+
+        // If still fewer than 2, get from properties list
+        if (propertyIds.length < 2) {
+          const propsRes = await fetch('/api/properties');
+          if (propsRes.ok) {
+            const propsData = await propsRes.json();
+            if (propsData.properties?.length >= 2) {
+              propertyIds = propsData.properties.slice(0, 2).map((p: any) => p.id);
+            }
+          }
+        }
+
+        if (propertyIds.length >= 2) {
+          const compareRes = await fetch('/api/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ propertyIds, budget: 35000 }),
+          });
+
+          if (compareRes.ok) {
+            const compareData = await compareRes.json();
+            if (compareData.properties && compareData.properties.length >= 2) {
+              setProperties(compareData.properties);
+              setTradeoffs(compareData.tradeoffs || []);
+              setIsLoading(false);
+              return;
+            }
+          }
+        }
+
+        // Fallback to demo properties
+        setProperties(demoProperties.slice(0, 2) as any);
+      } catch (e) {
+        console.error('Error loading comparison:', e);
+        setProperties(demoProperties.slice(0, 2) as any);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadComparison();
+  }, [searchParams]);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <p className="mt-4 text-sm text-gray-500">Evaluating side-by-side trade-offs...</p>
+      </div>
+    );
+  }
+
+  if (properties.length < 2) {
+    return (
+      <Card className="p-12 text-center">
+        <p className="font-semibold text-gray-900 dark:text-white">
+          Please select at least 2 properties to compare
+        </p>
+        <Link
+          href="/discover"
+          className="mt-4 inline-block rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+        >
+          Go to discovery →
+        </Link>
+      </Card>
+    );
+  }
 
   const rows = [
-    { label: 'Rent', values: comparable.map((p) => `${money(p.rent)} / mo`) },
-    { label: 'True monthly cost', values: comparable.map((p) => `≈ ${money(p.cost.estimatedMonthlyCost)}`) },
-    { label: 'Move-in cost', values: comparable.map((p) => money(p.cost.initialMoveInCost)) },
-    { label: 'Deposit', values: comparable.map((p) => money(p.deposit)) },
-    { label: 'Commute', values: comparable.map((p) => p.commute ?? '—') },
-    { label: 'Furnishing', values: comparable.map((p) => p.furnishing) },
-    { label: 'Bedrooms', values: comparable.map((p) => `${p.bedrooms} BHK`) },
-    { label: 'Amenities', values: comparable.map((p) => p.amenities.slice(0, 4).join(', ')) },
+    { label: 'Base rent', values: properties.map((p) => `${money(p.rent)} / mo`) },
     {
-      label: 'Affordability',
-      values: comparable.map((p) => p.cost.affordability.formattedSignal),
+      label: 'True monthly cost',
+      values: properties.map(
+        (p) =>
+          `≈ ${money(
+            p.costBreakdown?.estimatedMonthlyCost ||
+              (p as any).cost?.estimatedMonthlyCost ||
+              p.rent + 3000
+          )}`
+      ),
+    },
+    {
+      label: 'Move-in cash required',
+      values: properties.map((p) =>
+        money(
+          p.costBreakdown?.initialMoveInCost ||
+            (p as any).cost?.initialMoveInCost ||
+            p.deposit + p.rent
+        )
+      ),
+    },
+    { label: 'Security deposit', values: properties.map((p) => money(p.deposit)) },
+    { label: 'Commute indicator', values: properties.map((p) => p.commute ?? '—') },
+    { label: 'Furnishing status', values: properties.map((p) => p.furnishing) },
+    { label: 'Bedrooms', values: properties.map((p) => `${p.bedrooms} BHK`) },
+    {
+      label: 'Key Amenities',
+      values: properties.map((p) =>
+        Array.isArray(p.amenities) ? p.amenities.slice(0, 4).join(', ') : '—'
+      ),
+    },
+    {
+      label: 'Budget signal',
+      values: properties.map(
+        (p) =>
+          p.costBreakdown?.affordability?.formattedSignal ||
+          (p as any).cost?.affordability?.formattedSignal ||
+          'Calculated against ₹35k'
+      ),
     },
   ];
 
@@ -45,8 +187,7 @@ export default function ComparePage() {
           See the trade-offs, not just the columns.
         </h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Compare your shortlist against what matters: budget, commute, and move-in
-          cash.
+          Comparing {properties.length} options against your ₹35,000 monthly budget.
         </p>
       </div>
 
@@ -59,11 +200,11 @@ export default function ComparePage() {
                 <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   Decision factor
                 </th>
-                {comparable.map((p) => (
-                  <th className="px-5 py-4" key={p.id}>
+                {properties.map((p) => (
+                  <th key={p.id} className="px-5 py-4">
                     <Link
                       href={`/properties/${p.id}`}
-                      className="font-semibold text-gray-900 hover:text-emerald-600 dark:text-white dark:hover:text-emerald-400"
+                      className="font-bold text-gray-900 hover:text-emerald-600 dark:text-white dark:hover:text-emerald-400"
                     >
                       {p.title}
                     </Link>
@@ -74,37 +215,20 @@ export default function ComparePage() {
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {rows.map((row, ri) => (
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {rows.map((row, idx) => (
                 <tr
                   key={row.label}
-                  className={`border-b border-gray-100 last:border-0 dark:border-gray-800 ${
-                    ri % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-800/20'
-                  }`}
+                  className={idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50/50 dark:bg-gray-800/20'}
                 >
-                  <td className="px-5 py-3.5 font-medium text-gray-500 dark:text-gray-400">
+                  <td className="px-5 py-3.5 font-medium text-gray-700 dark:text-gray-300">
                     {row.label}
                   </td>
-                  {row.values.map((val, vi) => {
-                    // Highlight the better value for cost rows
-                    const highlight =
-                      row.label === 'True monthly cost' || row.label === 'Rent'
-                        ? comparable[vi].cost.estimatedMonthlyCost ===
-                          lowest.cost.estimatedMonthlyCost
-                        : false;
-                    return (
-                      <td
-                        key={vi}
-                        className={`px-5 py-3.5 ${
-                          highlight
-                            ? 'font-semibold text-emerald-700 dark:text-emerald-400'
-                            : 'text-gray-800 dark:text-gray-200'
-                        }`}
-                      >
-                        {val}
-                      </td>
-                    );
-                  })}
+                  {row.values.map((v, i) => (
+                    <td key={i} className="px-5 py-3.5 text-gray-900 dark:text-gray-100">
+                      {v}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
@@ -112,55 +236,48 @@ export default function ComparePage() {
         </div>
       </Card>
 
-      {/* Trade-off cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-emerald-200 bg-emerald-50/50 p-5 dark:border-emerald-800/50 dark:bg-emerald-900/10">
-          <Badge tone="green" className="mb-3">
-            Lower monthly cost
-          </Badge>
-          <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">
-            {lowest.title}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-emerald-800 dark:text-emerald-200">
-            <strong>{money(costDiff)}/month lower</strong> in estimated monthly cost
-            than {comparable.find((p) => p.id !== lowest.id)?.title}. That{"'"}s{' '}
-            {money(costDiff * 12)}/year in savings.
-          </p>
-        </Card>
+      {/* AI Trade-offs from Backend */}
+      {tradeoffs.length > 0 && (
+        <div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Structured Trade-off Insights
+          </h2>
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            {tradeoffs.map((t, idx) => (
+              <Card key={idx} className="p-4 border-l-4 border-l-emerald-500">
+                <Badge tone="blue">{t.dimension}</Badge>
+                <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                  {t.statement}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
-        <Card className="border-blue-200 bg-blue-50/50 p-5 dark:border-blue-800/50 dark:bg-blue-900/10">
-          <Badge tone="blue" className="mb-3">
-            Closer commute
-          </Badge>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">
-            {fastest.title}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-blue-800 dark:text-blue-200">
-            At <strong>{fastest.commute}</strong>, this has the shorter commute.
-            The convenience comes with a{' '}
-            {fastest.cost.estimatedMonthlyCost > lowest.cost.estimatedMonthlyCost
-              ? 'higher monthly total'
-              : 'lower monthly total'}
-            .
-          </p>
-        </Card>
-      </div>
-
-      {/* CTA */}
-      <div className="flex flex-wrap gap-3">
+      {/* Action links */}
+      <div className="flex gap-3">
         <Link
           href="/assistant"
-          className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+          className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
         >
-          Get decision assistant analysis →
+          View Decision Assistant narrative →
         </Link>
         <Link
-          href="/discover"
+          href="/copilot"
           className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
         >
-          Add more properties
+          Ask AI Copilot about trade-offs
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function ComparePage() {
+  return (
+    <Suspense fallback={<div className="py-12 text-center text-sm text-gray-500">Loading comparison...</div>}>
+      <CompareContent />
+    </Suspense>
   );
 }
