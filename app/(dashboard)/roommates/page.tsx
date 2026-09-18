@@ -151,23 +151,9 @@ export default function RoommatesPage() {
       });
     } catch (err: any) {
       console.error('Roommate compatibility call failed:', err);
-      // Fallback to explainable rule-based compatibility
-      setResult({
-        score: 82,
-        explanation:
-          'You align on budget, cleanliness standards, and non-smoking habits. The primary considerations are contrasting sleep routines (Night owl vs Early bird) and guest preferences.',
-        commonPreferences: [
-          'Budget alignment (₹18,000/month each)',
-          'High cleanliness expectations (Very neat)',
-          'Mutual non-smoking household',
-          'Pet-free living preference',
-        ],
-        potentialConflicts: [
-          'Sleep schedules: Night owl (12 AM - 8 AM) vs Early bird (10 PM - 6 AM)',
-          'Guest tolerance: Occasional weekends vs Frequent guests welcome',
-          'Kitchen habits: Vegetarian vs Non-vegetarian',
-        ],
-      });
+      // Removed the static demo fallback to ensure no 82% demo results are shown
+      setResult(null);
+      setErrorMsg(err.message || 'Unable to evaluate compatibility. Please try again.');
     } finally {
       setIsEvaluating(false);
     }
