@@ -89,6 +89,54 @@ startxref
     expect(JSON.parse(json.extractedFields).rent.value).toBe(20000);
     expect(json.summary).toBe('A standard lease agreement.');
     expect(JSON.parse(json.flaggedClauses)[0].clause).toBe('Lock-in');
+
+    // TEST: Verify that the actual extracted text was sent to Groq!
+    const firstCallArgs = vi.mocked(aiClient.completeStructuredJSON).mock.calls[0][0];
+    expect(firstCallArgs.userMessage).toContain('Mock PDF Text');
+  });
+
+  it('should explicitly mark missing fields as not found instead of guessing', async () => {
+    // Mock the extraction response with missing fields (e.g. no rent escalation)
+    vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+      rent: { value: 20000, found: true },
+      deposit: { value: 40000, found: true },
+      leaseDuration: { value: '11 months', found: true },
+      lockInPeriod: { value: '6 months', found: true },
+      noticePeriod: { value: '2 months', found: true },
+      rentEscalation: { value: null, found: false },
+      maintenanceResponsibility: { value: null, found: false },
+      utilityResponsibility: { value: null, found: false },
+      penalties: { value: null, found: false },
+      terminationConditions: { value: null, found: false },
+      summary: 'Partial lease agreement.',
+    });
+
+    vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+      flaggedClauses: [],
+      disclaimer: 'Informational only',
+    });
+
+    const contentStream = `BT /F1 12 Tf 20 700 Td (Partial Mock PDF) Tj ET`;
+    const streamLength = Buffer.byteLength(contentStream);
+    const mockPdfContent = `%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n4 0 obj\n<< /Length ${streamLength} >>\nstream\n${contentStream}\nendstream\nendobj\n5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\nxref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000223 00000 n \n0000000287 00000 n \ntrailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n375\n%%EOF`;
+
+    const blob = new Blob([Buffer.from(mockPdfContent)], { type: 'application/pdf' });
+    const formData = new FormData();
+    formData.append('file', blob, 'partial.pdf');
+
+    const request = new Request('http://localhost:3000/api/agreements', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    const json = await response.json();
+
+    const parsedFields = JSON.parse(json.extractedFields);
+    expect(parsedFields.rentEscalation.found).toBe(false);
+    expect(parsedFields.rentEscalation.value).toBeNull();
+    expect(parsedFields.maintenanceResponsibility.found).toBe(false);
   });
 
   it('should return 400 if no file is provided', async () => {
@@ -136,5 +184,61 @@ startxref
     expect(response.status).toBe(400);
     const json = await response.json();
     expect(json.error).toContain('File size exceeds');
+  });
+
+  it('should return 500 instead of demo data when AI analysis fails', async () => {
+    // Force AI to fail
+    vi.mocked(aiClient.completeStructuredJSON).mockRejectedValueOnce(new Error('AI API Error'));
+
+    const contentStream = `BT /F1 12 Tf 20 700 Td (Mock PDF Text) Tj ET`;
+    const streamLength = Buffer.byteLength(contentStream);
+    const mockPdfContent = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length ${streamLength} >>
+stream
+${contentStream}
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000223 00000 n
+0000000287 00000 n
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+375
+%%EOF`;
+
+    const blob = new Blob([Buffer.from(mockPdfContent)], { type: 'application/pdf' });
+    const formData = new FormData();
+    formData.append('file', blob, 'test.pdf');
+
+    const request = new Request('http://localhost:3000/api/agreements', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const response = await POST(request);
+
+    // Should NOT return 200 with demo data
+    expect(response.status).toBe(500);
+    const json = await response.json();
+    expect(json.error).toContain('AI API Error');
   });
 });

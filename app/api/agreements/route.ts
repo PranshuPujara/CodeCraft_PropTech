@@ -111,53 +111,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Generate structured fields with fallback
-    let extractionResponse: AgreementExtractionResponse;
-    try {
-      extractionResponse = await completeStructuredJSON<AgreementExtractionResponse>({
-        systemPrompt: AGREEMENT_EXTRACTION_SYSTEM_PROMPT,
-        userMessage: `Please extract the required fields from this rental agreement text:\n\n${extractedText}`,
-      });
-    } catch {
-      extractionResponse = {
-        rent: { value: 32000, found: true, clauseSnippet: 'Monthly rent of Rs 32,000' },
-        deposit: { value: 150000, found: true, clauseSnippet: 'Interest-free refundable deposit of Rs 1,50,000' },
-        leaseDuration: { value: '11 months', found: true, clauseSnippet: 'Period of 11 months' },
-        lockInPeriod: { value: '6 months', found: true, clauseSnippet: 'Minimum lock-in of 6 months' },
-        noticePeriod: { value: '1 month', found: true, clauseSnippet: 'One month written notice' },
-        rentEscalation: { value: '5% annually', found: true, clauseSnippet: '5% escalation upon renewal' },
-        maintenanceResponsibility: { value: 'Tenant', found: true, clauseSnippet: 'Society maintenance by tenant' },
-        utilityResponsibility: { value: 'Tenant', found: true, clauseSnippet: 'Electricity and water by tenant' },
-        penalties: { value: '18% interest on delayed rent', found: true, clauseSnippet: '18% per annum penalty on late payment' },
-        terminationConditions: { value: '30 days written notice', found: true, clauseSnippet: '30 days prior written notice' },
-        summary: 'Standard 11-month residential lease agreement in Bangalore with standard 5% escalation and 6-month lock-in.',
-      };
-    }
+    // 2. Generate structured fields
+    const extractionResponse = await completeStructuredJSON<AgreementExtractionResponse>({
+      systemPrompt: AGREEMENT_EXTRACTION_SYSTEM_PROMPT,
+      userMessage: `Please extract the required fields from this rental agreement text:\n\n${extractedText}`,
+    });
 
-    // 3. Generate summary/flags with fallback
-    let flagsResponse: AgreementFlagsResponse;
-    try {
-      flagsResponse = await completeStructuredJSON<AgreementFlagsResponse>({
-        systemPrompt: AGREEMENT_FLAGS_SYSTEM_PROMPT,
-        userMessage: `Please analyze this rental agreement text and flag clauses that deserve attention:\n\n${extractedText}`,
-      });
-    } catch {
-      flagsResponse = {
-        disclaimer: LEGAL_GUARDRAIL_DISCLAIMER,
-        flaggedClauses: [
-          {
-            clause: 'Unilateral rent escalation clause without cap',
-            reason: 'Landlord reserves right to revise rent upon lease renewal beyond the standard 5%.',
-            attentionLevel: 'medium',
-          },
-          {
-            clause: 'Full deposit forfeiture on early termination during lock-in',
-            reason: 'Leaving before 6 months results in loss of entire Rs 1,50,000 security deposit.',
-            attentionLevel: 'high',
-          },
-        ],
-      };
-    }
+    // 3. Generate summary/flags
+    const flagsResponse = await completeStructuredJSON<AgreementFlagsResponse>({
+      systemPrompt: AGREEMENT_FLAGS_SYSTEM_PROMPT,
+      userMessage: `Please analyze this rental agreement text and flag clauses that deserve attention:\n\n${extractedText}`,
+    });
 
     // 5. Runtime Validation
     let validatedExtraction;
