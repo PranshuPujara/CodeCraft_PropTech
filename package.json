@@ -12,10 +12,13 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",
     "@prisma/client": "5.22.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.47.0",
     "next": "14.2.35",
     "pdf-parse": "^2.4.5",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@types/node": "^20",
