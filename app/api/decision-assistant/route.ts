@@ -189,8 +189,25 @@ export async function POST(req: NextRequest) {
       decisionResult = generateDeterministicDecisionSupport(effectivePreferences, propertyContexts);
     }
 
+    const enrichedProperties = (decisionResult.properties || []).map((p) => {
+      const matchingCtx = propertyContexts.find((c) => c.id === p.propertyId);
+      return {
+        ...p,
+        propertyName: p.propertyName || matchingCtx?.title || 'Property',
+        location: matchingCtx?.location,
+        rent: matchingCtx?.rent,
+        deposit: matchingCtx?.deposit,
+        brokerage: matchingCtx?.brokerage,
+        bedrooms: matchingCtx?.bedrooms,
+        furnishing: matchingCtx?.furnishing,
+        commute: matchingCtx?.commute,
+        cost: matchingCtx?.cost,
+      };
+    });
+
     return NextResponse.json({
       ...decisionResult,
+      properties: enrichedProperties,
       evaluatedAgainst: {
         budget: effectivePreferences.budget,
         bedrooms: effectivePreferences.bedrooms,
