@@ -87,3 +87,36 @@ export function buildCopilotUserPrompt(query: string, context: UserCopilotContex
 
   return prompt;
 }
+
+/**
+ * Executes AI Rental Copilot completion via Groq API, with deterministic grounded fallback.
+ */
+export async function generateCopilotResponse(
+  query: string,
+  context: UserCopilotContext
+): Promise<CopilotResponse> {
+  const { completeStructuredJSON } = await import('../client');
+  const { generateDeterministicGroundedResponse } = await import('../copilotContext');
+
+  try {
+    const userPrompt = buildCopilotUserPrompt(query, context);
+    const result = await completeStructuredJSON<CopilotResponse>({
+      systemPrompt: COPILOT_SYSTEM_PROMPT,
+      userMessage: userPrompt,
+      maxTokens: 3000,
+      temperature: 0.1,
+    });
+
+    if (result && typeof result.answer === 'string' && result.answer.trim().length > 0) {
+      return {
+        answer: result.answer,
+        contextRefs: Array.isArray(result.contextRefs) ? result.contextRefs : [],
+        missingDataNotice: result.missingDataNotice || null,
+      };
+    }
+    throw new Error('Empty AI response from Groq');
+  } catch (err: any) {
+    console.warn('Groq AI Copilot call failed, using deterministic grounded fallback:', err?.message || err);
+    return generateDeterministicGroundedResponse(query, context);
+  }
+}

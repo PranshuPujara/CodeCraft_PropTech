@@ -1,5 +1,6 @@
 import { db } from '../db';
 import { ContextRef, CopilotResponse, LEGAL_GUARDRAIL_DISCLAIMER } from './types';
+export { generateCopilotResponse } from './prompts/copilot';
 
 export interface UserCopilotContext {
   user: {

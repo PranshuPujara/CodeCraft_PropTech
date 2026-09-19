@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
 import { z } from 'zod';
-import { completeStructuredJSON } from '../../../lib/ai/client';
-import { COPILOT_SYSTEM_PROMPT, buildCopilotUserPrompt } from '../../../lib/ai/prompts/copilot';
+import { generateCopilotResponse } from '../../../lib/ai/prompts/copilot';
 import {
   loadUserCopilotContext,
   generateDeterministicGroundedResponse,
@@ -48,19 +47,7 @@ export async function POST(request: Request) {
     const userContext = await loadUserCopilotContext(userId);
 
     // 2. Generate grounded response via Groq AI with deterministic fallback
-    let copilotResult: CopilotResponse;
-    try {
-      const userPrompt = buildCopilotUserPrompt(query, userContext);
-      copilotResult = await completeStructuredJSON<CopilotResponse>({
-        systemPrompt: COPILOT_SYSTEM_PROMPT,
-        userMessage: userPrompt,
-        maxTokens: 2500,
-        temperature: 0.1,
-      });
-    } catch (err) {
-      console.warn('AI Copilot generation failed; falling back to deterministic grounded response:', (err as Error).message);
-      copilotResult = generateDeterministicGroundedResponse(query, userContext);
-    }
+    const copilotResult = await generateCopilotResponse(query, userContext);
 
     // 3. Schema validation & fallback
     const validated = CopilotResponseSchema.safeParse(copilotResult);
