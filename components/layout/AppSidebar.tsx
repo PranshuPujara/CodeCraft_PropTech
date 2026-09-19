@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
 import { useSidebar } from '@/context/SidebarContext';
+import { useUser } from '@/context/UserContext';
 import {
   DashboardIcon,
   SearchIcon,
@@ -45,9 +47,43 @@ const navGroups = [
 
 export default function AppSidebar() {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
+  const { budget, updateBudget, isLoading } = useUser();
   const pathname = usePathname();
+  
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [editBudgetValue, setEditBudgetValue] = useState(budget.toString());
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const showFull = isExpanded || isHovered || isMobileOpen;
+
+  useEffect(() => {
+    setEditBudgetValue(budget.toString());
+  }, [budget]);
+
+  useEffect(() => {
+    if (isEditingBudget && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditingBudget]);
+
+  const handleBudgetSave = () => {
+    const val = Number(editBudgetValue);
+    if (!isNaN(val) && val > 0 && val <= 1000000) {
+      updateBudget(val);
+    } else {
+      setEditBudgetValue(budget.toString());
+    }
+    setIsEditingBudget(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleBudgetSave();
+    } else if (e.key === 'Escape') {
+      setEditBudgetValue(budget.toString());
+      setIsEditingBudget(false);
+    }
+  };
 
   return (
     <>
@@ -136,12 +172,49 @@ export default function AppSidebar() {
         {/* Budget widget */}
         {showFull && (
           <div className="border-t border-gray-200 p-4 dark:border-gray-700">
-            <div className="rounded-xl bg-gray-900 p-4 text-white dark:bg-gray-800">
-              <p className="text-xs font-medium text-gray-300">Your monthly budget</p>
-              <p className="mt-1.5 text-xl font-bold">
-                ₹35,000
-                <span className="text-sm font-medium text-gray-400"> / mo</span>
-              </p>
+            <div className="rounded-xl bg-gray-900 p-4 text-white dark:bg-gray-800 transition-colors">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-gray-300">Your monthly budget</p>
+                {!isEditingBudget && (
+                  <button 
+                    onClick={() => setIsEditingBudget(true)}
+                    className="text-xs text-gray-400 hover:text-emerald-400 transition"
+                    title="Edit budget"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+              
+              <div className="mt-1.5 flex items-baseline">
+                {isEditingBudget ? (
+                  <div className="flex items-center gap-1 w-full relative">
+                    <span className="text-xl font-bold text-emerald-400 absolute left-0">₹</span>
+                    <input
+                      ref={inputRef}
+                      type="number"
+                      value={editBudgetValue}
+                      onChange={(e) => setEditBudgetValue(e.target.value)}
+                      onBlur={handleBudgetSave}
+                      onKeyDown={handleKeyDown}
+                      className="w-full bg-gray-800 border border-gray-600 rounded px-1 pl-4 py-0.5 text-lg font-bold text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                      min="1"
+                      max="1000000"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xl font-bold cursor-pointer group" onClick={() => setIsEditingBudget(true)}>
+                    {isLoading ? (
+                      <span className="inline-block h-6 w-20 animate-pulse bg-gray-700 rounded"></span>
+                    ) : (
+                      <>
+                        ₹{new Intl.NumberFormat('en-IN').format(budget)}
+                        <span className="text-sm font-medium text-gray-400"> / mo</span>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
               <p className="mt-2 text-[11px] leading-4 text-gray-400">
                 Costs are compared against this number.
               </p>

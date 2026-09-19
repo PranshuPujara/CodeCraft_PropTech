@@ -10,6 +10,7 @@ import {
   SparklesIcon,
   ChevronDownIcon,
 } from '@/components/icons';
+import { useUser } from '@/context/UserContext';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
@@ -71,9 +72,9 @@ interface DecisionData {
   };
   propertyCount: number;
 }
-
 function AssistantContent() {
   const searchParams = useSearchParams();
+  const { budget: contextBudget, isLoading: isUserLoading } = useUser();
   const [data, setData] = useState<DecisionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -87,6 +88,8 @@ function AssistantContent() {
   };
 
   const loadDecisionAssistant = useCallback(async () => {
+    if (isUserLoading) return;
+    
     setIsLoading(true);
     setErrorMsg(null);
     try {
@@ -99,7 +102,10 @@ function AssistantContent() {
       const res = await fetch('/api/decision-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(propertyIds ? { propertyIds } : {}),
+        body: JSON.stringify({ 
+          ...(propertyIds ? { propertyIds } : {}),
+          preferences: { budget: contextBudget }
+        }),
       });
 
       if (!res.ok) {
@@ -120,7 +126,7 @@ function AssistantContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchParams]);
+  }, [searchParams, contextBudget, isUserLoading]);
 
   useEffect(() => {
     loadDecisionAssistant();

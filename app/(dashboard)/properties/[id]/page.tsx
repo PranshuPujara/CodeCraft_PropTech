@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { demoProperties } from '@/lib/demo-data';
+import { useUser } from '@/context/UserContext';
 import { getPropertyImage } from '@/lib/property-images';
 import { HeartIcon, HeartOutlineIcon } from '@/components/icons';
 
@@ -45,52 +46,59 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
   const [cost, setCost] = useState<CostResponse | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const { budget: globalBudget, isLoading: isUserLoading } = useUser();
+
+  const loadPropertyData = useCallback(async () => {
+    if (isUserLoading) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      const propRes = await fetch(`/api/properties/${params.id}`);
+      if (!propRes.ok) {
+        if (propRes.status === 404) {
+          setError('Property not found');
+          setIsLoading(false);
+          return;
+        }
+        throw new Error('Failed to load property');
+      }
+      const propData = await propRes.json();
+      setProperty(propData);
+
+      // Fetch dynamic cost based on user's current budget
+      const costRes = await fetch(`/api/properties/${params.id}/cost?budget=${globalBudget}`);
+      if (costRes.ok) {
+        const costData = await costRes.json();
+        setCost(costData);
+      } else {
+        const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
+        setCost(fallback.cost as any);
+      }
+
+      // 3. Check saved state
+      const savedRes = await fetch('/api/saved');
+      if (savedRes.ok) {
+        const savedData = await savedRes.json();
+        if (Array.isArray(savedData.savedProperties)) {
+          setIsSaved(savedData.savedProperties.some((s: any) => s.propertyId === params.id));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load property data:', err);
+      const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
+      setProperty(fallback);
+      setCost(fallback.cost as any);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [params.id, globalBudget, isUserLoading]);
 
   useEffect(() => {
-    async function loadData() {
-      setIsLoading(true);
-      try {
-        // 1. Fetch Property Details
-        const propRes = await fetch(`/api/properties/${params.id}`);
-        if (propRes.ok) {
-          const propData = await propRes.json();
-          setProperty(propData.property);
-        } else {
-          // Fallback to demo properties
-          const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
-          setProperty(fallback);
-        }
-
-        // 2. Fetch True Cost from Backend Cost Engine
-        const costRes = await fetch(`/api/properties/${params.id}/cost?budget=35000`);
-        if (costRes.ok) {
-          const costData = await costRes.json();
-          setCost(costData);
-        } else {
-          const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
-          setCost(fallback.cost as any);
-        }
-
-        // 3. Check saved state
-        const savedRes = await fetch('/api/saved');
-        if (savedRes.ok) {
-          const savedData = await savedRes.json();
-          if (Array.isArray(savedData.savedProperties)) {
-            setIsSaved(savedData.savedProperties.some((s: any) => s.propertyId === params.id));
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load property data:', err);
-        const fallback = demoProperties.find((p) => p.id === params.id) || demoProperties[0];
-        setProperty(fallback);
-        setCost(fallback.cost as any);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    loadData();
-  }, [params.id]);
+    loadPropertyData();
+  }, [loadPropertyData]);
 
   const toggleSave = async () => {
     if (!property) return;
@@ -123,7 +131,7 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
   if (!property) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
-        <p className="text-lg font-semibold text-gray-900 dark:text-white">Property not found</p>
+        <p className="text-lg font-semibold text-gray-900 dark:text-white">{error || 'Property not found'}</p>
         <Link href="/discover" className="mt-4 text-sm text-emerald-600">
           ← Back to discovery
         </Link>

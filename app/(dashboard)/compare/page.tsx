@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { demoProperties } from '@/lib/demo-data';
+import { useUser } from '@/context/UserContext';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
@@ -39,12 +40,11 @@ interface TradeOff {
 
 function CompareContent() {
   const searchParams = useSearchParams();
+  const { budget: budgetThreshold, isLoading: isUserLoading } = useUser();
   const [properties, setProperties] = useState<ComparedProperty[]>([]);
   const [tradeoffs, setTradeoffs] = useState<TradeOff[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
-
-  const budgetThreshold = 35000;
 
   useEffect(() => {
     async function loadComparison() {
@@ -122,8 +122,10 @@ function CompareContent() {
       }
     }
 
-    loadComparison();
-  }, [searchParams]);
+    if (!isUserLoading) {
+      loadComparison();
+    }
+  }, [searchParams, budgetThreshold, isUserLoading]);
 
   const getMonthlyCost = (p: ComparedProperty) =>
     p.costBreakdown?.estimatedMonthlyCost ||

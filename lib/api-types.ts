@@ -4,10 +4,13 @@ import type {
   ComparisonResponse,
   CopilotResponse,
   DecisionAssistantResponse,
+  FrictionPoint,
   RecommendationResponse,
   RoommateCompatibilityResponse,
 } from './ai/types';
 import type { AffordabilityResult, CostCalculationResult } from './cost';
+
+export type { FrictionPoint };
 
 export interface PropertyRecord {
   id: string;

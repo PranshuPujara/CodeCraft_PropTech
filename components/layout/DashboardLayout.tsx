@@ -2,6 +2,7 @@
 
 import { SidebarProvider, useSidebar } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { UserProvider } from '@/context/UserContext';
 import AppSidebar from './AppSidebar';
 import AppHeader from './AppHeader';
 
@@ -31,9 +32,11 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
-      <SidebarProvider>
-        <LayoutInner>{children}</LayoutInner>
-      </SidebarProvider>
+      <UserProvider>
+        <SidebarProvider>
+          <LayoutInner>{children}</LayoutInner>
+        </SidebarProvider>
+      </UserProvider>
     </ThemeProvider>
   );
 }

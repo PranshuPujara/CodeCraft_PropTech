@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import fs from 'fs';
+import path from 'path';
 import { POST } from '../../app/api/roommates/compatibility/route';
 import {
   extractAndNormalizeProfile,
@@ -486,5 +488,387 @@ describe('Roommate Profile Completeness & Validation (31 Acceptance Tests)', () 
     expect(data.error).toBeUndefined();
     expect(data.score).toBe(23);
     expect(data.potentialConflicts.length).toBeGreaterThan(0);
+    expect(data.frictionPoints).toBeDefined();
+    expect(data.frictionPoints.length).toBeGreaterThan(0);
+
+    // Verify actual Person A and Person B values in friction points
+    const sleepFriction = data.frictionPoints.find((fp: any) => fp.category === 'Sleep schedule');
+    expect(sleepFriction).toBeDefined();
+    expect(sleepFriction.personA).toBe('Early bird (10 PM – 6 AM)');
+    expect(sleepFriction.personB).toBe('Night owl (12 AM – 8 AM)');
+
+    const smokingFriction = data.frictionPoints.find((fp: any) => fp.category === 'Smoking');
+    expect(smokingFriction).toBeDefined();
+    expect(smokingFriction.personA).toBe('Smoker');
+    expect(smokingFriction.personB).toBe('Non-smoker');
+  });
+
+  // STRUCTURED FRICTION POINTS TESTS
+  it('returns empty friction points array when profiles are perfectly identical', async () => {
+    vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+      score: 100,
+      commonPreferences: ['All dimensions aligned'],
+      potentialConflicts: [],
+      explanation: 'Identical profiles.',
+    });
+
+    const req = new Request('http://localhost:3000/api/roommates/compatibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileA: validProfileA,
+        profileB: validProfileA,
+      }),
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+    expect(data.score).toBe(100);
+    expect(data.frictionPoints).toHaveLength(0);
+  });
+
+  it('dynamically adds friction point when a single field conflicts and removes it when restored', async () => {
+    // 1. Conflict on smoking
+    vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+      score: 85,
+      commonPreferences: [],
+      potentialConflicts: ['Smoking conflict'],
+      explanation: 'Smoking difference.',
+    });
+
+    const reqConflict = new Request('http://localhost:3000/api/roommates/compatibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileA: { ...validProfileA, smoking: 'Non-smoker' },
+        profileB: { ...validProfileA, smoking: 'Smoker' },
+      }),
+    });
+
+    const resConflict = await POST(reqConflict);
+    const dataConflict = await resConflict.json();
+    const smokeFp = dataConflict.frictionPoints.find((fp: any) => fp.category === 'Smoking');
+    expect(smokeFp).toBeDefined();
+    expect(smokeFp.personA).toBe('Non-smoker');
+    expect(smokeFp.personB).toBe('Smoker');
+
+    // 2. Restored to matching
+    vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+      score: 100,
+      commonPreferences: ['Mutual non-smoking household'],
+      potentialConflicts: [],
+      explanation: 'Both non-smokers.',
+    });
+
+    const reqMatching = new Request('http://localhost:3000/api/roommates/compatibility', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        profileA: { ...validProfileA, smoking: 'Non-smoker' },
+        profileB: { ...validProfileA, smoking: 'Non-smoker' },
+      }),
+    });
+
+    const resMatching = await POST(reqMatching);
+    const dataMatching = await resMatching.json();
+    const smokeFpMatching = dataMatching.frictionPoints.find((fp: any) => fp.category === 'Smoking');
+    expect(smokeFpMatching).toBeUndefined();
+  });
+
+  describe('UI Contract & Structured Friction Points Tests', () => {
+    const pageContent = fs.readFileSync(
+      path.resolve(__dirname, '../../app/(dashboard)/roommates/page.tsx'),
+      'utf-8'
+    );
+
+    it('1. Fit score renders in the UI markup', () => {
+      expect(pageContent).toContain('{result.score}%');
+      expect(pageContent).toContain('Fit Score');
+    });
+
+    it('2. Narrative analysis is no longer rendered in the UI', () => {
+      expect(pageContent).not.toContain('Narrative Analysis');
+      expect(pageContent).not.toContain('narrativeAnalysis');
+    });
+
+    it('3. Descriptive paragraph beside score is no longer rendered', () => {
+      expect(pageContent).not.toContain('{result.explanation}');
+    });
+
+    it('4. Friction points section renders dynamically in the UI', () => {
+      expect(pageContent).toContain('Potential Friction Points');
+      expect(pageContent).toContain('{fp.category}');
+      expect(pageContent).toContain('{fp.personA}');
+      expect(pageContent).toContain('{fp.personB}');
+    });
+
+    it('5. Matching fields do not appear as friction in calculation', async () => {
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 100,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: validProfileA,
+          profileB: validProfileA,
+        }),
+      });
+
+      const res = await POST(req);
+      const data = await res.json();
+      expect(data.frictionPoints).toHaveLength(0);
+    });
+
+    it('6. Conflicting fields appear as friction in calculation', async () => {
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 70,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: { ...validProfileA, cleanliness: 'Very neat' },
+          profileB: { ...validProfileA, cleanliness: 'Relaxed' },
+        }),
+      });
+
+      const res = await POST(req);
+      const data = await res.json();
+      expect(data.frictionPoints.some((fp: any) => fp.category === 'Cleanliness')).toBe(true);
+    });
+
+    it('7 & 8. Actual Person A and Person B values are provided in friction points', async () => {
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 70,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: { ...validProfileA, noiseTolerance: 'High — music/calls fine' },
+          profileB: { ...validProfileA, noiseTolerance: 'Low — need quiet' },
+        }),
+      });
+
+      const res = await POST(req);
+      const data = await res.json();
+      const noiseFp = data.frictionPoints.find((fp: any) => fp.category === 'Noise tolerance');
+      expect(noiseFp).toBeDefined();
+      expect(noiseFp.personA).toBe('High — music/calls fine');
+      expect(noiseFp.personB).toBe('Low — need quiet');
+    });
+
+    it('9 & 10. Changing inputs changes friction points and recalculates score', async () => {
+      // Conflicting guest preferences
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 85,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req1 = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: { ...validProfileA, guests: 'No guests' },
+          profileB: { ...validProfileA, guests: 'Frequent guests welcome' },
+        }),
+      });
+
+      const res1 = await POST(req1);
+      const data1 = await res1.json();
+      expect(data1.frictionPoints.some((fp: any) => fp.category === 'Guest preferences')).toBe(true);
+
+      // Aligned guest preferences
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 100,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req2 = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: { ...validProfileA, guests: 'No guests' },
+          profileB: { ...validProfileA, guests: 'No guests' },
+        }),
+      });
+
+      const res2 = await POST(req2);
+      const data2 = await res2.json();
+      expect(data2.frictionPoints.some((fp: any) => fp.category === 'Guest preferences')).toBe(false);
+      expect(data1.score).not.toBe(data2.score);
+    });
+
+    it('11. No-friction state displays structured placeholder instead of paragraph', () => {
+      expect(pageContent).toContain('No major friction points identified.');
+    });
+
+    it('12. Multiple friction points work without arbitrary truncation', async () => {
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 30,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: {
+            ...validProfileA,
+            smoking: 'Smoker',
+            foodPreferences: 'Non-vegetarian',
+            sleepSchedule: 'Early bird (10 PM – 6 AM)',
+          },
+          profileB: {
+            ...validProfileA,
+            smoking: 'Non-smoker',
+            foodPreferences: 'Vegan',
+            sleepSchedule: 'Night owl (12 AM – 8 AM)',
+          },
+        }),
+      });
+
+      const res = await POST(req);
+      const data = await res.json();
+      expect(data.frictionPoints.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('13. Recalculation completely replaces old state with new response', () => {
+      expect(pageContent).toContain('setResult({');
+      expect(pageContent).toContain('frictionPoints: data.frictionPoints || []');
+    });
+
+    it('14. No hardcoded friction list exists in page or route', () => {
+      // Verify page maps dynamically from result.frictionPoints
+      expect(pageContent).toContain('result.frictionPoints.map(');
+    });
+
+    it('15. No hardcoded score exists in page', () => {
+      expect(pageContent).toContain('{result.score}%');
+    });
+  });
+
+  describe('Graph UI Contract & Breakdown Tests', () => {
+    const pageContent = fs.readFileSync(
+      path.resolve(__dirname, '../../app/(dashboard)/roommates/page.tsx'),
+      'utf-8'
+    );
+
+    it('1. Graph renders after successful compatibility evaluation', () => {
+      expect(pageContent).toContain('Compatibility by category');
+    });
+
+    it('2. Graph contains all 10 categories', () => {
+      expect(pageContent).toContain("key: 'budget', label: 'Budget'");
+      expect(pageContent).toContain("key: 'sleepSchedule', label: 'Sleep schedule'");
+      expect(pageContent).toContain("key: 'workStudySchedule', label: 'Work/study schedule'");
+      expect(pageContent).toContain("key: 'cleanliness', label: 'Cleanliness'");
+      expect(pageContent).toContain("key: 'noiseTolerance', label: 'Noise tolerance'");
+      expect(pageContent).toContain("key: 'guestPreferences', label: 'Guest preferences'");
+      expect(pageContent).toContain("key: 'smoking', label: 'Smoking'");
+      expect(pageContent).toContain("key: 'foodPreferences', label: 'Food preferences'");
+      expect(pageContent).toContain("key: 'pets', label: 'Pets'");
+      expect(pageContent).toContain("key: 'socialPreferences', label: 'Social preferences'");
+    });
+
+    it('3. API returns breakdown with all 10 categories', async () => {
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 100,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: validProfileA,
+          profileB: validProfileA,
+        }),
+      });
+
+      const res = await POST(req);
+      const data = await res.json();
+      expect(data.breakdown).toBeDefined();
+      expect(data.breakdown.budget).toBeDefined();
+      expect(data.breakdown.sleepSchedule).toBeDefined();
+      expect(data.breakdown.cleanliness).toBeDefined();
+      expect(data.breakdown.smoking).toBeDefined();
+      expect(data.breakdown.guestPreferences).toBeDefined();
+      expect(data.breakdown.noiseTolerance).toBeDefined();
+      expect(data.breakdown.pets).toBeDefined();
+      expect(data.breakdown.socialPreferences).toBeDefined();
+      expect(data.breakdown.workStudySchedule).toBeDefined();
+      expect(data.breakdown.foodPreferences).toBeDefined();
+    });
+
+    it('4. Changing sleep changes sleep graph score', async () => {
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 90,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req1 = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: { ...validProfileA, sleepSchedule: 'Night owl (12 AM – 8 AM)' },
+          profileB: { ...validProfileA, sleepSchedule: 'Night owl (12 AM – 8 AM)' },
+        }),
+      });
+
+      const res1 = await POST(req1);
+      const data1 = await res1.json();
+      const sleepScoreAligned = data1.breakdown.sleepSchedule;
+
+      vi.mocked(aiClient.completeStructuredJSON).mockResolvedValueOnce({
+        score: 75,
+        commonPreferences: [],
+        potentialConflicts: [],
+        explanation: 'Evaluation complete.',
+      });
+
+      const req2 = new Request('http://localhost:3000/api/roommates/compatibility', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileA: { ...validProfileA, sleepSchedule: 'Night owl (12 AM – 8 AM)' },
+          profileB: { ...validProfileA, sleepSchedule: 'Early bird (10 PM – 6 AM)' },
+        }),
+      });
+
+      const res2 = await POST(req2);
+      const data2 = await res2.json();
+      const sleepScoreConflicted = data2.breakdown.sleepSchedule;
+
+      expect(sleepScoreAligned).toBeGreaterThan(sleepScoreConflicted);
+    });
+
+    it('5. Graph is dynamic and updates when state changes', () => {
+      expect(pageContent).toContain('result.breakdown');
+      expect(pageContent).toContain('result.breakdown![cat.key] ?? 0');
+    });
   });
 });

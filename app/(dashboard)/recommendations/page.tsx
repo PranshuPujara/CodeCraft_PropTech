@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { demoProperties } from '@/lib/demo-data';
 import { getPropertyImage } from '@/lib/property-images';
-import { BookmarkIcon, BookmarkOutlineIcon } from '@/components/icons';
+import { BookmarkIcon, BookmarkOutlineIcon, StarIcon, SparklesIcon } from '@/components/icons';
+import { useUser } from '@/context/UserContext';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
@@ -47,7 +48,8 @@ const BUDGET_PRESETS = [
 ];
 
 export default function RecommendationsPage() {
-  const [budget, setBudget] = useState('35000');
+  const { budget: globalBudget, updateBudget, isLoading: isUserLoading } = useUser();
+  const [budget, setBudget] = useState(globalBudget.toString());
   const [bedroomPref, setBedroomPref] = useState('2');
   const [furnishingPref, setFurnishingPref] = useState('Any');
   const [results, setResults] = useState<EnrichedRecommendation[]>([]);
@@ -95,6 +97,12 @@ export default function RecommendationsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isUserLoading) {
+      setBudget(globalBudget.toString());
+    }
+  }, [globalBudget, isUserLoading]);
+
   const fetchRecommendations = useCallback(async () => {
     setValidationError(null);
 
@@ -108,6 +116,10 @@ export default function RecommendationsPage() {
       if (budgetNum > 10000000) {
         setValidationError('Monthly budget cannot exceed ₹1,00,00,000.');
         return;
+      }
+      
+      if (budgetNum !== globalBudget) {
+        await updateBudget(budgetNum);
       }
     }
 

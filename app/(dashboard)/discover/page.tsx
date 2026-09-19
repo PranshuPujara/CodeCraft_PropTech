@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card';
 import { demoProperties } from '@/lib/demo-data';
 import { getPropertyImage } from '@/lib/property-images';
 import { BookmarkIcon, BookmarkOutlineIcon, FilterIcon, SearchIcon } from '@/components/icons';
+import { useUser } from '@/context/UserContext';
+import { calculateFullCostBreakdown } from '@/lib/cost';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 
@@ -39,6 +41,7 @@ interface PropertyItem {
 }
 
 export default function DiscoverPage() {
+  const { budget } = useUser();
   const [query, setQuery] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('All');
   const [bedrooms, setBedrooms] = useState('Any');
@@ -369,14 +372,23 @@ export default function DiscoverPage() {
           {properties.map((property) => {
             const isSaved = savedIds.includes(property.id);
             const isCompare = compareIds.includes(property.id);
-            const monthlyEst =
-              property.costBreakdown?.estimatedMonthlyCost ||
-              (property as any).cost?.estimatedMonthlyCost ||
-              property.rent + 4000;
-            const moveInEst =
-              property.costBreakdown?.initialMoveInCost ||
-              (property as any).cost?.initialMoveInCost ||
-              property.deposit + property.brokerage + property.rent;
+            const dynamicCost = calculateFullCostBreakdown(
+              {
+                rent: property.rent,
+                deposit: property.deposit,
+                brokerage: property.brokerage,
+                maintenance: property.costBreakdown?.maintenance ?? (property as any).cost?.maintenance ?? 3000,
+                electricity: property.costBreakdown?.electricity ?? (property as any).cost?.electricity ?? 1500,
+                water: property.costBreakdown?.water ?? (property as any).cost?.water ?? 500,
+                internet: property.costBreakdown?.internet ?? (property as any).cost?.internet ?? 1000,
+                transport: property.costBreakdown?.transport ?? (property as any).cost?.transport ?? 2000,
+                otherRecurring: property.costBreakdown?.otherRecurring ?? (property as any).cost?.otherRecurring ?? 500,
+              },
+              budget
+            );
+            
+            const monthlyEst = dynamicCost.estimatedMonthlyCost;
+            const moveInEst = dynamicCost.initialMoveInCost;
 
             // Resolve high-resolution demo photo
             const imageInfo = getPropertyImage(property);

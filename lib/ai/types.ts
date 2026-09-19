@@ -62,10 +62,19 @@ export interface AgreementFlagsResponse {
   disclaimer: string; // Mandatory legal advice guardrail disclaimer
 }
 
+export interface FrictionPoint {
+  category: string;
+  personA: string;
+  personB: string;
+  severity?: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
 // 5. Roommate Compatibility (§PRODUCT 6.7)
 export interface RoommateCompatibilityResponse {
   commonPreferences: string[];
   potentialConflicts: string[];
+  frictionPoints?: FrictionPoint[];
+  breakdown?: Record<string, number>; // Category-level scores (0-100)
   explanation: string; // Score is never returned without explanation (Principle 2)
   score: number;       // 0 - 100
 }
