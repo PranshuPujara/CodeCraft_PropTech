@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
+import { getAuthUser } from '../../../lib/auth-session';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -56,9 +57,8 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     
-    // For demo purposes, we'll hardcode the user ID to the demo user 
-    // since authentication isn't implemented in this track.
-    const userId = 'demo-user-1';
+    const authUser = await getAuthUser();
+    const userId = authUser?.id || 'demo-user-1';
 
     if (!file) {
       return NextResponse.json(
@@ -181,8 +181,11 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
+    const authUser = await getAuthUser();
+    const userId = authUser?.id || 'demo-user-1';
+
     const agreements = await db.agreement.findMany({
-      where: { userId: 'demo-user-1' },
+      where: { userId },
       orderBy: { uploadedAt: 'desc' },
     });
 

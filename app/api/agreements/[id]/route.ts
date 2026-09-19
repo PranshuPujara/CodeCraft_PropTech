@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../../lib/db';
+import { getAuthUser } from '../../../../lib/auth-session';
 
 export async function GET(
   request: Request,
@@ -7,6 +8,8 @@ export async function GET(
 ) {
   try {
     const { id } = params;
+    const authUser = await getAuthUser();
+    const currentUserId = authUser?.id || 'demo-user-1';
 
     const agreement = await db.agreement.findUnique({
       where: { id },
@@ -19,7 +22,7 @@ export async function GET(
       );
     }
 
-    if (agreement.userId !== 'demo-user-1') {
+    if (agreement.userId !== currentUserId) {
       return NextResponse.json(
         { error: 'Unauthorized access to agreement' },
         { status: 403 }

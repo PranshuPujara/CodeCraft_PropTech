@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
+import { getAuthUser } from '../../../lib/auth-session';
 import {
   generatePropertyRecommendations,
   UserPreferencesInput,
@@ -50,7 +51,8 @@ export async function GET(req: NextRequest) {
     const hasAnyQueryPreference = Object.values(preferences).some((val) => val !== undefined && (Array.isArray(val) ? val.length > 0 : true));
 
     if (!hasAnyQueryPreference) {
-      const userId = queryUserId || 'demo-user-1';
+      const authUser = await getAuthUser();
+      const userId = authUser?.id || queryUserId || 'demo-user-1';
       const user = await db.user.findUnique({ where: { id: userId } });
       
       if (user) {

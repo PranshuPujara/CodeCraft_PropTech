@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
+import { getAuthUser } from '../../../lib/auth-session';
 import { z } from 'zod';
 import { generateCopilotResponse } from '../../../lib/ai/prompts/copilot';
 import {
@@ -7,13 +8,16 @@ import {
   generateDeterministicGroundedResponse,
 } from '../../../lib/ai/copilotContext';
 
-
 export const dynamic = 'force-dynamic';
 
 const ContextRefSchema = z.object({
-  type: z.enum(['property', 'agreement', 'cost', 'roommate']),
-  id: z.string().default(''),
-  name: z.string().default(''),
+  type: z.enum(['property', 'agreement', 'cost', 'roommate']).optional(),
+  entityType: z.enum(['property', 'cost', 'agreement', 'userPreference']).optional(),
+  entityId: z.string().optional(),
+  id: z.string().optional(),
+  label: z.string().optional(),
+  name: z.string().optional(),
+  snippet: z.string().optional(),
 });
 
 const CopilotResponseSchema = z.object({
@@ -24,9 +28,10 @@ const CopilotResponseSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const authUser = await getAuthUser();
     const body = await request.json().catch(() => ({}));
     const query = typeof body.query === 'string' ? body.query.trim() : '';
-    const userId = typeof body.userId === 'string' && body.userId ? body.userId : 'demo-user-1';
+    const userId = authUser?.id || (typeof body.userId === 'string' && body.userId ? body.userId : 'demo-user-1');
 
     // Input validation
     if (!query) {
@@ -102,8 +107,9 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    const authUser = await getAuthUser();
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || 'demo-user-1';
+    const userId = authUser?.id || searchParams.get('userId') || 'demo-user-1';
 
     const messages = await db.chatMessage.findMany({
       where: { userId },

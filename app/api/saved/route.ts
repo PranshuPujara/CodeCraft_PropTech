@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
+import { getAuthUser } from '../../../lib/auth-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,8 +8,13 @@ const DEFAULT_USER_ID = 'demo-user-1';
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthUser();
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || DEFAULT_USER_ID;
+    const userId =
+      authUser?.id ||
+      searchParams.get('userId') ||
+      DEFAULT_USER_ID;
+
     const isShortlistedParam = searchParams.get('isShortlisted');
 
     const where: Record<string, unknown> = { userId };
@@ -66,6 +72,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authUser = await getAuthUser();
     const body = await request.json().catch(() => null);
 
     if (!body || !body.propertyId || typeof body.propertyId !== 'string') {
@@ -75,7 +82,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userId = body.userId || DEFAULT_USER_ID;
+    const userId =
+      authUser?.id ||
+      body.userId ||
+      DEFAULT_USER_ID;
     const propertyId = body.propertyId.trim();
     const isShortlisted =
       typeof body.isShortlisted === 'boolean' ? body.isShortlisted : false;
@@ -166,9 +176,13 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authUser = await getAuthUser();
     const { searchParams } = new URL(request.url);
     let propertyId = searchParams.get('propertyId');
-    let userId = searchParams.get('userId') || DEFAULT_USER_ID;
+    let userId =
+      authUser?.id ||
+      searchParams.get('userId') ||
+      DEFAULT_USER_ID;
 
     if (!propertyId) {
       const body = await request.json().catch(() => null);

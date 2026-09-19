@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '../../../lib/db';
+import { getAuthUser } from '../../../lib/auth-session';
 import { calculateFullCostBreakdown } from '../../../lib/cost';
 import { completeStructuredJSON } from '../../../lib/ai/client';
 import {
@@ -17,8 +18,9 @@ const DEFAULT_USER_ID = 'demo-user-1';
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthUser();
     const body = await req.json().catch(() => ({}));
-    const userId = body.userId || DEFAULT_USER_ID;
+    const userId = authUser?.id || body.userId || DEFAULT_USER_ID;
 
     // 1. Fetch User & Preferences from Database
     const user = await db.user.findUnique({
