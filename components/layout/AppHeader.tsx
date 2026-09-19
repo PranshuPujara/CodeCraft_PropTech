@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -62,7 +63,13 @@ export default function AppHeader() {
 
         {/* Mobile logo */}
         <span className="flex items-center gap-2 font-bold text-gray-900 xl:hidden dark:text-white">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-xs text-white">R</span>
+          <Image
+            src="/logo.png"
+            alt="Rentwise"
+            width={28}
+            height={28}
+            className="h-7 w-7 rounded-lg object-contain"
+          />
           Rentwise
         </span>
 

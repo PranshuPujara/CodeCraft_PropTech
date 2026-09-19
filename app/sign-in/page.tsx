@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 
@@ -39,8 +40,15 @@ function SignInContent() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 dark:bg-gray-950">
       <div className="w-full max-w-sm text-center">
         {/* Brand Icon */}
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-sm">
-          R
+        <div className="mx-auto mb-4 flex items-center justify-center">
+          <Image
+            src="/logo.png"
+            alt="Rentwise Logo"
+            width={56}
+            height={56}
+            className="h-14 w-14 rounded-2xl object-contain shadow-sm"
+            priority
+          />
         </div>
 
         {/* Title & Subtitle */}

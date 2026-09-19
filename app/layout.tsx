@@ -5,6 +5,10 @@ import SessionWrapper from "@/components/auth/SessionWrapper";
 export const metadata: Metadata = {
   title: "Rentwise — AI-Powered Rental Intelligence",
   description: "Make smarter rental decisions. See the true cost, compare trade-offs, understand your agreement, and get AI-powered recommendations.",
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

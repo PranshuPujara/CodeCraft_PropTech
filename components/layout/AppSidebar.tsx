@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSidebar } from '@/context/SidebarContext';
 import {
@@ -72,9 +73,14 @@ export default function AppSidebar() {
         {/* Logo */}
         <div className={`flex h-16 items-center gap-3 border-b border-gray-200 px-5 dark:border-gray-700 ${!showFull ? 'justify-center' : ''}`}>
           <Link href="/" className="flex items-center gap-3" onClick={() => isMobileOpen && toggleMobileSidebar()}>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-sm">
-              R
-            </span>
+            <Image
+              src="/logo.png"
+              alt="Rentwise Logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 shrink-0 rounded-xl object-contain shadow-sm"
+              priority
+            />
             {showFull && (
               <span className="flex flex-col">
                 <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">
