@@ -22,6 +22,7 @@ export interface PropertyRecord {
   bathrooms?: number;
   description: string;
   commute?: string;
+  image?: string;
 }
 
 export interface SavedPropertyRecord {

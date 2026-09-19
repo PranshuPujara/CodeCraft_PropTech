@@ -9,18 +9,22 @@ import type {
 export const demoProperties: Array<PropertyRecord & { cost: PropertyCostResponse }> = [
   {
     id: 'indiranagar-2bhk', title: 'Modern 2BHK in Heart of Indiranagar', location: 'Indiranagar, Bangalore', rent: 32000, deposit: 150000, brokerage: 16000, furnishing: 'Semi-Furnished', bedrooms: 2, bathrooms: 2, commute: '22 min to Koramangala Tech Park', amenities: ['Power Backup', 'Security', 'Parking', 'Balcony', 'Wi-fi'], description: 'A well-ventilated 2BHK close to 100ft Road with a modular kitchen and covered parking.',
+    image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=1000&q=80',
     cost: calculateFullCostBreakdown({ rent: 32000, deposit: 150000, brokerage: 16000, maintenance: 3000, electricity: 1500, water: 500, internet: 1000, transport: 2000, otherRecurring: 500 }, 35000) as PropertyCostResponse,
   },
   {
     id: 'koramangala-loft', title: 'Stylish 2BHK Loft with Workstations', location: 'Koramangala 1st Block, Bangalore', rent: 38000, deposit: 190000, brokerage: 19000, furnishing: 'Furnished', bedrooms: 2, bathrooms: 2, commute: '9 min to Koramangala Tech Park', amenities: ['Wi-fi', 'Power Backup', 'Security', 'Parking', 'Gym'], description: 'Designed for remote professionals with dual workstations and fibre internet.',
+    image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1000&q=80',
     cost: calculateFullCostBreakdown({ rent: 38000, deposit: 190000, brokerage: 19000, maintenance: 3200, electricity: 2200, water: 600, internet: 1500, transport: 1200, otherRecurring: 500 }, 35000) as PropertyCostResponse,
   },
   {
     id: 'jayanagar-2bhk', title: 'Sunny 2BHK Apartment near Metro', location: 'Jayanagar 4th Block, Bangalore', rent: 30000, deposit: 150000, brokerage: 15000, furnishing: 'Semi-Furnished', bedrooms: 2, bathrooms: 2, commute: '31 min to Koramangala Tech Park', amenities: ['Security', 'Parking', 'Balcony', 'Power Backup'], description: 'Bright east-facing apartment, five minutes from Jayanagar Metro.',
+    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1000&q=80',
     cost: calculateFullCostBreakdown({ rent: 30000, deposit: 150000, brokerage: 15000, maintenance: 2200, electricity: 1300, water: 500, internet: 1000, transport: 1000, otherRecurring: 400 }, 35000) as PropertyCostResponse,
   },
   {
     id: 'hsr-studio', title: 'Cozy 1BHK Studio near HSR Layout', location: 'HSR Layout, Bangalore', rent: 22000, deposit: 80000, brokerage: 11000, furnishing: 'Furnished', bedrooms: 1, bathrooms: 1, commute: '18 min to Koramangala Tech Park', amenities: ['Wi-fi', 'Power Backup', 'Security', 'Balcony'], description: 'A compact furnished 1BHK with a work desk and high-speed fibre internet.',
+    image: 'https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=1000&q=80',
     cost: calculateFullCostBreakdown({ rent: 22000, deposit: 80000, brokerage: 11000, maintenance: 1500, electricity: 1000, water: 400, internet: 800, transport: 1200, otherRecurring: 300 }, 35000) as PropertyCostResponse,
   },
 ];

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { demoProperties } from '@/lib/demo-data';
+import { getPropertyImage } from '@/lib/property-images';
 import { HomeIcon, HeartIcon, HeartOutlineIcon } from '@/components/icons';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
@@ -159,8 +160,21 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
         {/* Left — property info */}
         <div>
           {/* Hero image area */}
-          <div className="flex h-48 items-center justify-center rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 sm:h-64">
-            <HomeIcon className="h-16 w-16 text-gray-300 dark:text-gray-600" />
+          <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-gray-100 shadow-sm dark:bg-gray-800">
+            <img
+              src={(property as any).image || getPropertyImage(property).url}
+              alt={property.title}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20 pointer-events-none" />
+            <div className="absolute bottom-4 left-4 flex items-center gap-2">
+              <span className="rounded-md bg-black/60 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md border border-white/10 shadow-sm">
+                {property.bedrooms} BHK
+              </span>
+              <span className="rounded-md bg-black/60 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md border border-white/10 shadow-sm">
+                {property.furnishing}
+              </span>
+            </div>
           </div>
 
           {/* Details */}

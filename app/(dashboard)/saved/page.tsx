@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { getPropertyImage } from '@/lib/property-images';
 import {
   HomeIcon,
   BookmarkIcon,
@@ -370,12 +371,32 @@ function PropertyCard({
 
   const amenitiesList = Array.isArray(p.amenities) ? p.amenities : [];
 
+  const imageInfo = getPropertyImage(p);
+  const imageUrl = (p as any).image || imageInfo.url;
+  const imageAlt = (p as any).imageAlt || imageInfo.alt;
+
   return (
     <Card className="group flex flex-col overflow-hidden transition hover:shadow-md dark:border-gray-800">
       {/* Visual Cover / Banner */}
-      <div className="relative flex h-48 items-center justify-center bg-gradient-to-br from-gray-100 via-slate-100 to-gray-200 dark:from-gray-800/80 dark:via-gray-800 dark:to-gray-900">
-        <HomeIcon className="h-12 w-12 text-gray-300 transition group-hover:scale-105 dark:text-gray-600" />
-        
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <img
+          src={imageUrl}
+          alt={imageAlt}
+          loading="lazy"
+          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+
+        {/* Overlaid Badges */}
+        <div className="absolute left-3 top-3 flex items-center gap-1.5">
+          <span className="rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-md border border-white/10 shadow-sm">
+            {p.bedrooms} BHK
+          </span>
+          <span className="rounded-md bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-md border border-white/10 shadow-sm">
+            {p.furnishing}
+          </span>
+        </div>
+
         {/* Wishlist / Bookmark Button */}
         <button
           onClick={(e) => {
