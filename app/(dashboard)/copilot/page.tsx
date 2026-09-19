@@ -1,147 +1,53 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Disclaimer } from '@/components/ui/disclaimer';
 import { SendIcon, SparklesIcon } from '@/components/icons';
-import { demoProperties } from '@/lib/demo-data';
+import { ContextRef } from '@/lib/ai/types';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
-  groundingSources?: string[];
+  contextRefs?: ContextRef[];
+  missingDataNotice?: string | null;
   hasLegalDisclaimer?: boolean;
 }
 
 const suggestedPrompts = [
-  'Can I afford the Indiranagar 2BHK?',
-  'What is my actual monthly cost for Koramangala?',
-  'Explain the lock-in clause in my agreement',
-  'Compare Indiranagar vs Koramangala on trade-offs',
-  'What should I pay attention to before signing?',
-  'Why was Jayanagar 2BHK recommended?',
+  'Can I afford this apartment?',
+  'Explain this agreement clause.',
+  'Compare these properties.',
+  'What is my actual monthly cost?',
+  'Why was this property recommended?',
+  'What should I pay attention to?',
 ];
 
-const initialMessages: Message[] = [
-  {
-    id: 'msg-1',
-    role: 'assistant',
-    content: `Hello! I'm your Rental Intelligence Copilot. I analyze your rental options using your actual budget (₹35,000/mo), commute targets, property cost breakdowns, and uploaded agreements.
+const welcomeMessage: Message = {
+  id: 'msg-welcome',
+  role: 'assistant',
+  content: `Hello! I'm your AI Rental Copilot, strictly grounded in your actual rental records.
 
-Ask me anything about affordability, hidden costs, agreement terms, or trade-offs.`,
-    timestamp: 'Just now',
-    groundingSources: ['User Profile (₹35k/mo)', '4 Properties', '1 Rental Agreement'],
-  },
-];
+I have access to your stated monthly budget (₹35,000/mo), saved properties with itemized cost models, and uploaded lease agreements.
 
-function generateAssistantResponse(userPrompt: string): { content: string; groundingSources: string[]; hasLegalDisclaimer: boolean } {
-  const query = userPrompt.toLowerCase();
-
-  if (query.includes('afford') || query.includes('indiranagar')) {
-    return {
-      content: `**Affordability Analysis for Modern 2BHK in Indiranagar:**
-
-- **Base Rent:** ₹32,000/mo
-- **Estimated True Monthly Cost:** ≈ ₹40,500/mo *(includes maintenance ₹3,000, electricity ₹1,500, water ₹500, internet ₹1,000, transport ₹2,000, other recurring ₹500)*
-- **Stated Budget:** ₹35,000/mo
-- **Assessment:** This property is **₹5,500 (15.7%) over** your monthly budget target when accounting for true recurring expenses.
-- **Move-in Cash Required:** ₹1,98,000 *(Deposit: ₹1,50,000 + Brokerage: ₹16,000 + First month rent: ₹32,000)*.
-
-**Recommendation with explanation:** It is feasible if you can trim personal discretionary spend or split recurring utility bills with a co-tenant.`,
-      groundingSources: ['Indiranagar 2BHK Cost Model', 'User Budget: ₹35,000'],
-      hasLegalDisclaimer: false,
-    };
-  }
-
-  if (query.includes('monthly cost') || query.includes('koramangala')) {
-    return {
-      content: `**Actual Monthly Cost Breakdown for Koramangala Loft:**
-
-- **Listed Rent:** ₹38,000/mo
-- **Estimated Total Monthly Cost:** ≈ ₹47,200/mo *(134.9% of your ₹35,000 budget)*
-- **Itemized Breakdown:**
-  - Maintenance: ₹3,200 (society dues)
-  - Utilities: Electricity ≈ ₹2,200, Water ₹600, Fibre Internet ₹1,500
-  - Commute: ₹1,200 (only 9 min travel distance to Koramangala Tech Park)
-  - Other recurring: ₹500
-- **Total Initial Move-in:** ₹2,47,000 *(Security deposit: ₹1,90,000 + Brokerage: ₹19,000 + 1st month rent: ₹38,000)*.
-
-*Note: All utility amounts marked with ≈ are estimates based on local Bangalore average tenant consumption.*`,
-      groundingSources: ['Koramangala Loft Itemized Model', 'Bangalore BESCOM Utility Estimates'],
-      hasLegalDisclaimer: false,
-    };
-  }
-
-  if (query.includes('lock-in') || query.includes('agreement') || query.includes('clause') || query.includes('attention') || query.includes('signing')) {
-    return {
-      content: `**Agreement Clause Intelligence (Indiranagar Agreement):**
-
-1. **Six-Month Lock-In Period (High Attention):**
-   - *Clause:* Tenant cannot terminate the tenancy within the first 6 months.
-   - *Explanation:* Vacating before month 6 typically forfeits the deposit or requires paying rent for the remaining lock-in period. Clarify exit terms before executing.
-
-2. **5% Rent Escalation at Renewal (Medium Attention):**
-   - *Clause:* Rent increases by 5% upon 11-month renewal.
-   - *Explanation:* Year 2 rent would rise from ₹32,000 to ₹33,600/month (annual rent increase of ₹19,200).
-
-3. **Society Maintenance & Utilities:**
-   - *Clause:* Tenant bears monthly society maintenance (₹3,000) and metered utilities.
-
-*Check for missing terms: No explicit clause on early termination penalty outside the lock-in period.*`,
-      groundingSources: ['Indiranagar-rental-agreement.pdf', 'Clauses 4, 8, and 12'],
-      hasLegalDisclaimer: true,
-    };
-  }
-
-  if (query.includes('compare') || query.includes('trade-off')) {
-    return {
-      content: `**Trade-off Comparison: Indiranagar vs Koramangala:**
-
-- **Monthly Cost:** Indiranagar is **₹6,700/mo cheaper** (≈ ₹40,500/mo vs ≈ ₹47,200/mo). That saves ₹80,400 per year.
-- **Commute:** Koramangala is **13 minutes faster each way** (9 min vs 22 min to Koramangala Tech Park).
-- **Move-in Cash:** Indiranagar requires ₹1,98,000 upfront vs ₹2,47,000 for Koramangala (saves ₹49,000 day one).
-- **Furnishing:** Koramangala is fully furnished with ready dual workstations; Indiranagar is semi-furnished.
-
-**Synthesis:** Choose Indiranagar if staying closer to your ₹35,000 budget is your top priority. Choose Koramangala only if daily commute time and a turn-key remote workspace justify a 35% budget overshoot.`,
-      groundingSources: ['demoProperties[0]', 'demoProperties[1]', 'Calculated Cost Delta'],
-      hasLegalDisclaimer: false,
-    };
-  }
-
-  if (query.includes('jayanagar') || query.includes('recommend')) {
-    return {
-      content: `**Why Jayanagar 2BHK is Recommended:**
-
-- **Budget Match:** Base rent is ₹30,000/mo and estimated true monthly cost is ≈ ₹36,400/mo — the closest 2BHK to your ₹35,000 target.
-- **Transit Access:** 5-minute walk to Jayanagar Green Line Metro station, providing reliable non-traffic commute.
-- **Upfront Savings:** Lower deposit requirement (₹1,50,000) compared to Koramangala (₹1,90,000).
-- **Key Trade-off:** Commute to Koramangala Tech Park is 31 min (longer by road than Indiranagar's 22 min).`,
-      groundingSources: ['demoProperties[2]', 'Bangalore Metro Proximity Map'],
-      hasLegalDisclaimer: false,
-    };
-  }
-
-  return {
-    content: `I analyzed your question against your 4 tracked properties and agreement record:
-
-- **Monthly Budget Context:** ₹35,000/month.
-- **Current Shortlist:** Indiranagar 2BHK (₹40,500/mo true cost) and Koramangala Loft (₹47,200/mo true cost).
-- **Lowest Cost Option:** HSR Studio at ≈ ₹27,200/mo true cost.
-- **Agreement Status:** 1 agreement uploaded with 2 flagged clauses requiring attention.
-
-Would you like me to run a detailed affordability test, calculate move-in cash requirements, or review specific agreement clauses?`,
-    groundingSources: ['Rental Intelligence Knowledge Base', '4 Properties Data'],
-    hasLegalDisclaimer: false,
-  };
-}
+Feel free to ask me any of the core decision questions below:`,
+  timestamp: 'Just now',
+  contextRefs: [
+    { type: 'cost', id: 'budget', name: 'Budget: ₹35,000/mo' },
+    { type: 'property', id: 'saved-all', name: 'Saved Properties' },
+    { type: 'agreement', id: 'agreement-latest', name: 'Lease Agreement' },
+  ],
+};
 
 export default function CopilotPage() {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -149,13 +55,40 @@ export default function CopilotPage() {
   };
 
   useEffect(() => {
+    // Load historical messages from DB if available
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/copilot');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.messages) && data.messages.length > 0) {
+            const mapped: Message[] = data.messages.map((m: any) => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              contextRefs: m.contextRefs || [],
+              hasLegalDisclaimer: m.content.toLowerCase().includes('not legal advice') || m.content.toLowerCase().includes('agreement'),
+            }));
+            setMessages(mapped);
+          }
+        }
+      } catch {
+        // Fall back to default welcome
+      }
+    }
+    loadHistory();
+  }, []);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const handleSend = (textToSend?: string) => {
+  const handleSend = async (textToSend?: string) => {
     const query = (textToSend || input).trim();
     if (!query || isTyping || query.length > 1000) return;
 
+    setErrorMsg(null);
     const userMessage: Message = {
       id: `usr-${Date.now()}`,
       role: 'user',
@@ -167,20 +100,53 @@ export default function CopilotPage() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI grounded response (or can integrate with /api/copilot when online)
-    setTimeout(() => {
-      const resp = generateAssistantResponse(query);
+    try {
+      const res = await fetch('/api/copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || 'Failed to get Copilot response');
+      }
+
+      const data = await res.json();
       const assistantMessage: Message = {
-        id: `ast-${Date.now()}`,
+        id: data.id || `ast-${Date.now()}`,
         role: 'assistant',
-        content: resp.content,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        groundingSources: resp.groundingSources,
-        hasLegalDisclaimer: resp.hasLegalDisclaimer,
+        content: data.answer,
+        timestamp: new Date(data.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        contextRefs: data.contextRefs || [],
+        missingDataNotice: data.missingDataNotice,
+        hasLegalDisclaimer:
+          data.answer.toLowerCase().includes('not legal advice') ||
+          (data.contextRefs && data.contextRefs.some((r: ContextRef) => r.type === 'agreement')),
       };
+
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error communicating with AI Copilot');
+    } finally {
       setIsTyping(false);
-    }, 600);
+    }
+  };
+
+  const getContextRefLink = (ref: ContextRef) => {
+    if (ref.type === 'property' && ref.id && ref.id !== 'saved-all') {
+      return `/properties/${ref.id}`;
+    }
+    if (ref.type === 'agreement') {
+      return `/agreements`;
+    }
+    if (ref.type === 'cost' || ref.id === 'saved-all') {
+      return `/saved`;
+    }
+    if (ref.type === 'roommate') {
+      return `/roommates`;
+    }
+    return null;
   };
 
   return (
@@ -197,32 +163,40 @@ export default function CopilotPage() {
             </h1>
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Grounded in your financial profile, verified listings, and uploaded lease agreements.
+            Grounded strictly in your financial profile, verified properties, itemized costs, and lease agreements.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Badge tone="green">Budget: ₹35,000/mo</Badge>
-          <Badge tone="blue">{demoProperties.length} Properties in Scope</Badge>
+          <Badge tone="blue">Context Grounded</Badge>
         </div>
       </div>
 
       {/* Suggested Quick Prompts */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-          Suggested:
+          Core Questions:
         </span>
-        {suggestedPrompts.slice(0, 4).map((p) => (
+        {suggestedPrompts.map((p) => (
           <button
             key={p}
             type="button"
+            disabled={isTyping}
             onClick={() => handleSend(p)}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700 transition hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-emerald-500 dark:hover:bg-gray-700"
+            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-700 transition hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-800 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-emerald-500 dark:hover:bg-gray-700"
           >
             {p}
           </button>
         ))}
       </div>
+
+      {/* Error alert banner if any */}
+      {errorMsg && (
+        <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-600 border border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900">
+          {errorMsg}
+        </div>
+      )}
 
       {/* Messages Scroll Area */}
       <Card className="flex-1 overflow-y-auto p-4 sm:p-6">
@@ -249,25 +223,48 @@ export default function CopilotPage() {
               >
                 <div className="whitespace-pre-line">{m.content}</div>
 
-                {m.groundingSources && m.groundingSources.length > 0 && (
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-gray-200/60 pt-2 text-[11px] text-gray-500 dark:border-gray-700/60 dark:text-gray-400">
-                    <span className="font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                      Grounded in:
-                    </span>
-                    {m.groundingSources.map((source, idx) => (
-                      <span
-                        key={idx}
-                        className="rounded bg-gray-200/70 px-1.5 py-0.5 font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                      >
-                        {source}
-                      </span>
-                    ))}
+                {/* Missing data warning callout */}
+                {m.missingDataNotice && (
+                  <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/80 p-2.5 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+                    <span className="font-semibold">Notice:</span> {m.missingDataNotice}
                   </div>
                 )}
 
+                {/* ContextRefs Pills */}
+                {m.contextRefs && m.contextRefs.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-gray-200/60 pt-2 text-[11px] text-gray-500 dark:border-gray-700/60 dark:text-gray-400">
+                    <span className="font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                      ContextRefs:
+                    </span>
+                    {m.contextRefs.map((ref, idx) => {
+                      const link = getContextRefLink(ref);
+                      const badgeContent = (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 rounded bg-gray-200/80 px-2 py-0.5 font-medium text-gray-700 transition hover:bg-emerald-100 hover:text-emerald-800 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-emerald-950 dark:hover:text-emerald-300"
+                        >
+                          <span className="text-[9px] uppercase font-bold text-gray-500 dark:text-gray-400">
+                            [{ref.type}]
+                          </span>
+                          {ref.name}
+                        </span>
+                      );
+
+                      return link ? (
+                        <Link key={idx} href={link} className="inline-block">
+                          {badgeContent}
+                        </Link>
+                      ) : (
+                        <span key={idx}>{badgeContent}</span>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Mandatory legal advice guardrail disclaimer */}
                 {m.hasLegalDisclaimer && (
                   <div className="mt-3">
-                    <Disclaimer text="Informational analysis only. Not legal advice. Consult an advocate for legal representation." />
+                    <Disclaimer text="Informational clause analysis only. Not legal advice. Consult an advocate for legal determinations." />
                   </div>
                 )}
               </div>
@@ -277,7 +274,7 @@ export default function CopilotPage() {
           {isTyping && (
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <span className="flex h-2 w-2 animate-ping rounded-full bg-emerald-500" />
-              <span>Analyzing property models & agreement clauses...</span>
+              <span>Querying saved properties, itemized costs & agreement terms...</span>
             </div>
           )}
 
@@ -298,8 +295,9 @@ export default function CopilotPage() {
           maxLength={1000}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask anything (e.g. 'Can I afford Indiranagar with a ₹35k budget?')..."
-          className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
+          placeholder="Ask anything (e.g. 'Can I afford this apartment?')..."
+          disabled={isTyping}
+          className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
         />
         <button
           type="submit"
