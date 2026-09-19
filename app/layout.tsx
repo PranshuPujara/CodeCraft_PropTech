@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import SessionWrapper from "@/components/auth/SessionWrapper";
 
 export const metadata: Metadata = {
   title: "Rentwise — AI-Powered Rental Intelligence",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-outfit antialiased">
-        {children}
+        <SessionWrapper>{children}</SessionWrapper>
       </body>
     </html>
   );
