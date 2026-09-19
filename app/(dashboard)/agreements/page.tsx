@@ -3,16 +3,60 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Disclaimer } from '@/components/ui/disclaimer';
 import { demoAgreement } from '@/lib/demo-data';
-import { UploadIcon, DocumentIcon } from '@/components/icons';
+import {
+  UploadIcon,
+  DocumentIcon,
+  SparklesIcon,
+  ChevronDownIcon,
+} from '@/components/icons';
 
-const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
+const formatCompactCurrency = (v: any) => {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'number') {
+    if (v >= 100000) {
+      const lakhs = v / 100000;
+      return `₹${lakhs % 1 === 0 ? lakhs : lakhs.toFixed(1)}L`;
+    }
+    if (v >= 1000) {
+      const k = v / 1000;
+      return `₹${k % 1 === 0 ? k : k.toFixed(0)}K`;
+    }
+    return `₹${v.toLocaleString('en-IN')}`;
+  }
+  return String(v);
+};
+
+const formatFullCurrency = (v: any) => {
+  if (v === null || v === undefined || v === '') return 'Not found';
+  if (typeof v === 'number') {
+    return `₹${new Intl.NumberFormat('en-IN').format(v)}`;
+  }
+  return String(v);
+};
+
+const formatCompactDuration = (v: any, fallback = 'None') => {
+  if (v === null || v === undefined || v === '') return fallback;
+  const str = String(v).trim();
+  return str
+    .replace(/months?/i, 'mo')
+    .replace(/years?/i, 'yr')
+    .replace(/days?/i, 'd');
+};
+
+const cleanFirstSentence = (text: string): string => {
+  if (!text) return '';
+  const match = text.match(/^.*?[.!?](?:\s|$)/);
+  return (match ? match[0] : text).trim();
+};
 
 export default function AgreementsPage() {
   const [agreement, setAgreement] = useState<any>(demoAgreement);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showUploadZone, setShowUploadZone] = useState(false);
+  const [showAllAttention, setShowAllAttention] = useState(false);
+  const [showExtractedDetails, setShowExtractedDetails] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -35,7 +79,6 @@ export default function AgreementsPage() {
   const handleFileUpload = async (file: File) => {
     if (!file) return;
 
-    // Client-side validation
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       setUploadError('Invalid file type. Please upload a PDF document (.pdf).');
       return;
@@ -82,6 +125,7 @@ export default function AgreementsPage() {
         summary: newAgreement.summary,
         flaggedClauses: flagged,
       });
+      setShowUploadZone(false);
     } catch (err: any) {
       console.error('Error uploading agreement:', err);
       setUploadError(err.message || 'Error parsing agreement PDF');
@@ -91,235 +135,377 @@ export default function AgreementsPage() {
   };
 
   const fields = agreement?.extractedFields || demoAgreement.extractedFields;
-  const flaggedClauses = agreement?.flaggedClauses || demoAgreement.flaggedClauses;
+  const flaggedClauses = agreement?.flaggedClauses || demoAgreement.flaggedClauses || [];
+
+  // Sort flagged clauses: high -> medium -> low
+  const priorityMap: Record<string, number> = { high: 1, medium: 2, low: 3 };
+  const sortedFlags = [...flaggedClauses].sort((a: any, b: any) => {
+    const pA = priorityMap[a.attentionLevel?.toLowerCase()] || 4;
+    const pB = priorityMap[b.attentionLevel?.toLowerCase()] || 4;
+    return pA - pB;
+  });
+
+  const displayedFlags = showAllAttention ? sortedFlags : sortedFlags.slice(0, 3);
+  const plainSummary = agreement?.summary || fields?.summary || null;
+
+  // Key-value terms for grid
+  const keyTerms = [
+    {
+      label: 'Monthly rent',
+      value: fields?.rent?.found ? formatFullCurrency(fields.rent.value) : 'Not found',
+      found: fields?.rent?.found,
+      snippet: fields?.rent?.clauseSnippet,
+    },
+    {
+      label: 'Security deposit',
+      value: fields?.deposit?.found ? formatFullCurrency(fields.deposit.value) : 'Not found',
+      found: fields?.deposit?.found,
+      snippet: fields?.deposit?.clauseSnippet,
+    },
+    {
+      label: 'Lease duration',
+      value: fields?.leaseDuration?.found ? String(fields.leaseDuration.value) : 'Not found',
+      found: fields?.leaseDuration?.found,
+      snippet: fields?.leaseDuration?.clauseSnippet,
+    },
+    {
+      label: 'Lock-in period',
+      value: fields?.lockInPeriod?.found ? String(fields.lockInPeriod.value) : 'None stated',
+      found: fields?.lockInPeriod?.found,
+      snippet: fields?.lockInPeriod?.clauseSnippet,
+    },
+    {
+      label: 'Notice period',
+      value: fields?.noticePeriod?.found ? String(fields.noticePeriod.value) : 'Not found',
+      found: fields?.noticePeriod?.found,
+      snippet: fields?.noticePeriod?.clauseSnippet,
+    },
+    {
+      label: 'Rent escalation',
+      value: fields?.rentEscalation?.found ? String(fields.rentEscalation.value) : 'None stated',
+      found: fields?.rentEscalation?.found,
+      snippet: fields?.rentEscalation?.clauseSnippet,
+    },
+    {
+      label: 'Maintenance',
+      value: fields?.maintenanceResponsibility?.found ? String(fields.maintenanceResponsibility.value) : 'Not found',
+      found: fields?.maintenanceResponsibility?.found,
+      snippet: fields?.maintenanceResponsibility?.clauseSnippet,
+    },
+    {
+      label: 'Utilities',
+      value: fields?.utilityResponsibility?.found ? String(fields.utilityResponsibility.value) : 'Not found',
+      found: fields?.utilityResponsibility?.found,
+      snippet: fields?.utilityResponsibility?.clauseSnippet,
+    },
+    {
+      label: 'Penalties',
+      value: fields?.penalties?.found ? String(fields.penalties.value) : 'None specified',
+      found: fields?.penalties?.found,
+      snippet: fields?.penalties?.clauseSnippet,
+    },
+    {
+      label: 'Termination conditions',
+      value: fields?.terminationConditions?.found ? String(fields.terminationConditions.value) : 'Standard notice',
+      found: fields?.terminationConditions?.found,
+      snippet: fields?.terminationConditions?.clauseSnippet,
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-          Agreement intelligence
-        </p>
-        <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
-          Understand what your agreement states.
-        </h1>
-        <p className="mt-2 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
-          Upload a rental agreement PDF to extract key terms and flag items worth your attention.
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6 pb-12">
+      {/* 1. HEADER */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              Agreement Intelligence
+            </p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Understand what your agreement states.
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Essential lease terms and potential attention points extracted from your PDF.
+            </p>
+          </div>
 
-      {/* Mandatory Legal Disclaimer */}
-      <Disclaimer />
-
-      {/* Upload area */}
-      <Card className="p-6">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
-          }}
-        />
-
-        <div
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            if (e.dataTransfer.files?.[0]) handleFileUpload(e.dataTransfer.files[0]);
-          }}
-          className="cursor-pointer flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-12 text-center transition hover:border-emerald-300 hover:bg-emerald-50/30 dark:border-gray-700 dark:bg-gray-800/30 dark:hover:border-emerald-700"
-        >
-          <UploadIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-          <p className="mt-3 text-[15px] font-medium text-gray-700 dark:text-gray-300">
-            {isUploading ? 'Extracting & analyzing agreement clauses...' : 'Drag & drop your agreement PDF here'}
-          </p>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            or click to browse · PDF format only
-          </p>
           <button
-            type="button"
-            disabled={isUploading}
-            className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            onClick={() => setShowUploadZone(!showUploadZone)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-750"
           >
-            {isUploading ? 'Analyzing...' : 'Select PDF file'}
+            <UploadIcon className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+            {showUploadZone ? 'Close upload' : 'Upload different PDF'}
           </button>
         </div>
 
-        {uploadError && (
-          <div className="mt-3 text-center text-xs text-red-600 dark:text-red-400">
-            {uploadError}
-          </div>
-        )}
+        {/* Compact Legal Disclaimer */}
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200/70 bg-amber-50/50 px-3 py-2 text-xs leading-normal text-amber-900 dark:border-amber-800/30 dark:bg-amber-950/20 dark:text-amber-300">
+          <span className="font-semibold shrink-0">Informational only:</span>
+          <span>
+            Not legal advice. This analysis explains what the agreement states; it does not assess enforceability or predict legal outcomes.
+          </span>
+        </div>
+      </div>
 
-        {/* Analyzed file indicator */}
-        {agreement && (
-          <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800">
-            <DocumentIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {agreement.fileName}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Analyzed on {agreement.uploadedAt || 'Current Session'} · Stored in database
-              </p>
-            </div>
-            <Badge tone="green">Analyzed</Badge>
-          </div>
-        )}
-      </Card>
+      {/* UPLOAD / RE-UPLOAD ZONE (Toggled or if no agreement) */}
+      {(showUploadZone || !agreement) && (
+        <Card className="p-5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.[0]) handleFileUpload(e.target.files[0]);
+            }}
+          />
 
-      {/* Summary */}
-      {agreement?.summary && (
-        <Card className="p-5 sm:p-6">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            Plain-language summary
-          </h2>
-          <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-            {agreement.summary}
-          </p>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (e.dataTransfer.files?.[0]) handleFileUpload(e.dataTransfer.files[0]);
+            }}
+            className="cursor-pointer flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50/70 py-8 text-center transition hover:border-emerald-500 hover:bg-emerald-50/20 dark:border-gray-700 dark:bg-gray-800/40 dark:hover:border-emerald-500"
+          >
+            <UploadIcon className="h-7 w-7 text-gray-400 dark:text-gray-500" />
+            <p className="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+              {isUploading ? 'Extracting and analyzing clauses...' : 'Drop your agreement PDF here or click to browse'}
+            </p>
+            <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+              PDF format only · up to 5MB
+            </p>
+          </div>
+
+          {uploadError && (
+            <p className="mt-2 text-center text-xs font-medium text-rose-600 dark:text-rose-400">
+              {uploadError}
+            </p>
+          )}
         </Card>
       )}
 
-      {/* Flagged clauses */}
-      {flaggedClauses && flaggedClauses.length > 0 && (
-        <Card className="p-5 sm:p-6">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-              Worth your attention
-            </h2>
-            <Badge tone="amber">{flaggedClauses.length} items flagged</Badge>
+      {/* ACTIVE FILE INDICATOR */}
+      {agreement && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200/80 bg-gray-50/60 px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900/40">
+          <div className="flex items-center gap-2.5 truncate">
+            <DocumentIcon className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span className="truncate text-xs font-medium text-gray-900 dark:text-white">
+              {agreement.fileName || 'Rental Agreement'}
+            </span>
+            <span className="hidden text-xs text-gray-400 sm:inline">·</span>
+            <span className="hidden text-xs text-gray-500 dark:text-gray-400 sm:inline">
+              Analyzed {agreement.uploadedAt || 'Recently'}
+            </span>
           </div>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Informational clause breakdowns — not legal advice.
-          </p>
+          <Badge tone="green" className="shrink-0 text-[10px]">
+            Verified Analysis
+          </Badge>
+        </div>
+      )}
 
-          <div className="mt-4 space-y-3">
-            {flaggedClauses.map((flag: any, index: number) => (
-              <div
-                key={index}
-                className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800/40 dark:bg-amber-950/20"
+      {/* 2. AGREEMENT SUMMARY / HERO METRICS */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Monthly rent
+          </p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {fields?.rent?.found ? formatCompactCurrency(fields.rent.value) : '—'}
+          </p>
+          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            {fields?.rent?.found ? 'Base rent / mo' : 'Not stated'}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Security deposit
+          </p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {fields?.deposit?.found ? formatCompactCurrency(fields.deposit.value) : '—'}
+          </p>
+          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            {fields?.deposit?.found ? 'Refundable deposit' : 'Not stated'}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Lease
+          </p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {fields?.leaseDuration?.found ? formatCompactDuration(fields.leaseDuration.value) : '—'}
+          </p>
+          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            Tenancy period
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Lock-in
+          </p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {fields?.lockInPeriod?.found ? formatCompactDuration(fields.lockInPeriod.value) : 'None'}
+          </p>
+          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            Minimum commitment
+          </p>
+        </div>
+
+        <div className="col-span-2 rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm sm:col-span-1 dark:border-gray-800 dark:bg-gray-900">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Notice
+          </p>
+          <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {fields?.noticePeriod?.found ? formatCompactDuration(fields.noticePeriod.value) : '—'}
+          </p>
+          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            Prior to vacate
+          </p>
+        </div>
+      </div>
+
+      {/* 3. WORTH YOUR ATTENTION (Visual Focal Point) */}
+      {sortedFlags.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold tracking-tight text-gray-900 dark:text-white">
+                Worth your attention
+              </h2>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                {sortedFlags.length} points
+              </span>
+            </div>
+            {sortedFlags.length > 3 && (
+              <button
+                onClick={() => setShowAllAttention(!showAllAttention)}
+                className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
               >
-                <div className="flex items-center gap-2">
-                  <Badge tone={flag.attentionLevel === 'high' ? 'red' : 'amber'}>
-                    {flag.attentionLevel.toUpperCase()} ATTENTION
-                  </Badge>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">
-                    {flag.clause}
+                {showAllAttention
+                  ? 'Show fewer attention points ↑'
+                  : `View all attention points (${sortedFlags.length}) →`}
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-2.5">
+            {displayedFlags.map((flag: any, idx: number) => {
+              const level = flag.attentionLevel?.toLowerCase() || 'medium';
+              const tone = level === 'high' ? 'red' : level === 'medium' ? 'amber' : 'neutral';
+              return (
+                <div
+                  key={idx}
+                  className="flex flex-col gap-1 rounded-xl border border-gray-200/80 bg-white p-3.5 shadow-sm transition hover:border-gray-300 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Badge tone={tone} className="shrink-0 uppercase font-bold text-[10px] tracking-wide">
+                      {level}
+                    </Badge>
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                      {flag.clause}
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 sm:max-w-md sm:text-right">
+                    {cleanFirstSentence(flag.reason)}
                   </p>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
-                  {flag.reason}
-                </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 4. AI SUMMARY */}
+      {plainSummary && (
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 dark:border-emerald-950/50 dark:bg-emerald-950/15">
+          <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+            <SparklesIcon className="h-4 w-4 shrink-0" />
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              AI Summary
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            {plainSummary}
+          </p>
+        </div>
+      )}
+
+      {/* 5. KEY TERMS (Compact Grid of Key-Value Cards) */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-semibold tracking-tight text-gray-900 dark:text-white">
+          Key terms overview
+        </h2>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          {keyTerms.map((term, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl border border-gray-200/80 bg-white p-3 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+            >
+              <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 truncate">
+                {term.label}
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold text-gray-900 dark:text-white">
+                {term.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 6. DETAILED TERMS (Expandable Accordion) */}
+      <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
+        <button
+          onClick={() => setShowExtractedDetails(!showExtractedDetails)}
+          className="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800/40 rounded-xl"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-900 dark:text-white">
+              View extracted details
+            </span>
+            <span className="text-xs text-gray-400">
+              ({keyTerms.length} clauses analyzed)
+            </span>
+          </div>
+          <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <span>{showExtractedDetails ? 'Hide details' : 'Show details'}</span>
+            <ChevronDownIcon
+              className={`h-4 w-4 transition-transform duration-200 ${
+                showExtractedDetails ? 'rotate-180' : ''
+              }`}
+            />
+          </div>
+        </button>
+
+        {showExtractedDetails && (
+          <div className="border-t border-gray-100 divide-y divide-gray-100 px-4 dark:border-gray-800 dark:divide-gray-800">
+            {keyTerms.map((term, idx) => (
+              <div key={idx} className="py-3 sm:flex sm:items-start sm:justify-between sm:gap-4">
+                <div className="sm:w-1/3">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                    {term.label}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {term.value}
+                  </p>
+                </div>
+                <div className="mt-1 sm:mt-0 sm:w-2/3 sm:text-right">
+                  {term.snippet ? (
+                    <p className="text-xs italic text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-lg sm:inline-block text-left">
+                      &quot;{term.snippet}&quot;
+                    </p>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">
+                      No verbatim snippet matched
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
-        </Card>
-      )}
-
-      {/* Extracted key fields */}
-      <Card className="overflow-hidden">
-        <div className="border-b border-gray-200 bg-gray-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-800/50">
-          <h2 className="text-[13px] font-semibold text-gray-900 dark:text-white">
-            Extracted agreement terms (10 Core Dimensions)
-          </h2>
-        </div>
-        <div className="divide-y divide-gray-100 dark:divide-gray-800">
-          <FieldRow
-            label="Monthly rent"
-            value={fields.rent?.found ? money(fields.rent.value) : 'Not found in agreement'}
-            snippet={fields.rent?.clauseSnippet}
-            found={fields.rent?.found}
-          />
-          <FieldRow
-            label="Security deposit"
-            value={fields.deposit?.found ? money(fields.deposit.value) : 'Not found in agreement'}
-            snippet={fields.deposit?.clauseSnippet}
-            found={fields.deposit?.found}
-          />
-          <FieldRow
-            label="Lease duration"
-            value={fields.leaseDuration?.found ? String(fields.leaseDuration.value) : 'Not found in agreement'}
-            snippet={fields.leaseDuration?.clauseSnippet}
-            found={fields.leaseDuration?.found}
-          />
-          <FieldRow
-            label="Lock-in period"
-            value={fields.lockInPeriod?.found ? String(fields.lockInPeriod.value) : 'Not found in agreement'}
-            snippet={fields.lockInPeriod?.clauseSnippet}
-            found={fields.lockInPeriod?.found}
-          />
-          <FieldRow
-            label="Notice period"
-            value={fields.noticePeriod?.found ? String(fields.noticePeriod.value) : 'Not found in agreement'}
-            snippet={fields.noticePeriod?.clauseSnippet}
-            found={fields.noticePeriod?.found}
-          />
-          <FieldRow
-            label="Rent escalation"
-            value={fields.rentEscalation?.found ? String(fields.rentEscalation.value) : 'Not found in agreement'}
-            snippet={fields.rentEscalation?.clauseSnippet}
-            found={fields.rentEscalation?.found}
-          />
-          <FieldRow
-            label="Maintenance responsibility"
-            value={fields.maintenanceResponsibility?.found ? String(fields.maintenanceResponsibility.value) : 'Not found in agreement'}
-            snippet={fields.maintenanceResponsibility?.clauseSnippet}
-            found={fields.maintenanceResponsibility?.found}
-          />
-          <FieldRow
-            label="Utility responsibility"
-            value={fields.utilityResponsibility?.found ? String(fields.utilityResponsibility.value) : 'Not found in agreement'}
-            snippet={fields.utilityResponsibility?.clauseSnippet}
-            found={fields.utilityResponsibility?.found}
-          />
-          <FieldRow
-            label="Penalties"
-            value={fields.penalties?.found ? String(fields.penalties.value) : 'Not found in agreement'}
-            snippet={fields.penalties?.clauseSnippet}
-            found={fields.penalties?.found}
-          />
-          <FieldRow
-            label="Termination conditions"
-            value={fields.terminationConditions?.found ? String(fields.terminationConditions.value) : 'Not found in agreement'}
-            snippet={fields.terminationConditions?.clauseSnippet}
-            found={fields.terminationConditions?.found}
-          />
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function FieldRow({
-  label,
-  value,
-  snippet,
-  found,
-}: {
-  label: string;
-  value: string;
-  snippet?: string;
-  found?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1 px-5 py-3.5 sm:flex-row sm:items-start sm:justify-between">
-      <div className="sm:w-1/3">
-        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</p>
-        {snippet && (
-          <p className="mt-0.5 text-xs italic text-gray-400 dark:text-gray-500">
-            &quot;{snippet}&quot;
-          </p>
-        )}
-      </div>
-      <div className="sm:w-2/3 sm:text-right">
-        {found === false ? (
-          <span className="text-sm text-gray-400 italic">Not found in agreement</span>
-        ) : (
-          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-            {value}
-          </span>
         )}
       </div>
     </div>
