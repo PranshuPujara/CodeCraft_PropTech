@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { demoProperties } from '@/lib/demo-data';
 import { getPropertyImage } from '@/lib/property-images';
-import { HomeIcon, HeartIcon, HeartOutlineIcon } from '@/components/icons';
+import { HeartIcon, HeartOutlineIcon } from '@/components/icons';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
 

@@ -95,7 +95,7 @@ export default function DiscoverPage() {
     } catch {
       // Fallback to client filtered demo properties if network error
       const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-      let filtered = demoProperties.filter((p) => {
+      const filtered = demoProperties.filter((p) => {
         const matchesTokens =
           tokens.length === 0 ||
           tokens.every(
