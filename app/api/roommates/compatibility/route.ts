@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { completeStructuredJSON } from '../../../../lib/ai/client';
 import { ROOMMATE_COMPATIBILITY_SYSTEM_PROMPT, buildCompatibilityUserPrompt } from '../../../../lib/ai/prompts/compatibility';
 import { RoommateCompatibilityResponse } from '../../../../lib/ai/types';
+import { validateRoommatePair } from '../../../../lib/validations/roommate';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,49 +16,29 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { profileA, profileB } = body;
 
-    // Basic validation
-    if (!profileA || !profileB) {
+    // Validate both profiles with alias support and required key checks
+    const validation = validateRoommatePair(profileA, profileB);
+    if (!validation.isValid) {
+      if (validation.missingKeysA.length > 0 || validation.missingKeysB.length > 0) {
+        return NextResponse.json(
+          { 
+            error: 'Profiles are incomplete. They must contain all required preferences.',
+            missingKeysA: validation.missingKeysA,
+            missingKeysB: validation.missingKeysB
+          },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
-        { error: 'Both profileA and profileB are required.' },
+        { error: validation.error || 'Invalid profile preferences.' },
         { status: 400 }
       );
     }
 
-    const requiredKeys = [
-      'budget', 'sleepSchedule', 'workSchedule', 'cleanliness', 
-      'noiseTolerance', 'guests', 'smoking', 'foodPreferences', 
-      'pets', 'socialPreferences'
-    ];
-
-    const missingKeysA = requiredKeys.filter(key => profileA[key] === undefined);
-    const missingKeysB = requiredKeys.filter(key => profileB[key] === undefined);
-
-    if (missingKeysA.length > 0 || missingKeysB.length > 0) {
-      return NextResponse.json(
-        { 
-          error: 'Profiles are incomplete. They must contain all required preferences.',
-          missingKeysA,
-          missingKeysB
-        },
-        { status: 400 }
-      );
-    }
-
-    // Numerical budget validation
-    const budgetA = Number(profileA.budget);
-    const budgetB = Number(profileB.budget);
-    if (isNaN(budgetA) || budgetA <= 0 || budgetA > 10000000) {
-      return NextResponse.json(
-        { error: 'Invalid budget in profileA: must be a positive number up to 10,000,000.' },
-        { status: 400 }
-      );
-    }
-    if (isNaN(budgetB) || budgetB <= 0 || budgetB > 10000000) {
-      return NextResponse.json(
-        { error: 'Invalid budget in profileB: must be a positive number up to 10,000,000.' },
-        { status: 400 }
-      );
-    }
+    const normA = validation.profileA!;
+    const normB = validation.profileB!;
+    const budgetA = normA.budget;
+    const budgetB = normB.budget;
 
     // ==========================================
     // DETERMINISTIC EVALUATION ENGINE
@@ -82,8 +63,8 @@ export async function POST(req: Request) {
     }
 
     // 2. Sleep Schedule (15%)
-    const sleepA = normalize(profileA.sleepSchedule);
-    const sleepB = normalize(profileB.sleepSchedule);
+    const sleepA = normalize(normA.sleepSchedule);
+    const sleepB = normalize(normB.sleepSchedule);
     if (sleepA === sleepB) {
       score += 15;
       if (sleepA.includes('early')) alignments.push('Both prefer early sleep schedules');
@@ -93,119 +74,119 @@ export async function POST(req: Request) {
       score += 15;
       alignments.push('Compatible sleep schedules due to flexibility');
     } else {
-      conflicts.push(`Conflicting sleep schedules (${profileA.sleepSchedule} vs ${profileB.sleepSchedule})`);
+      conflicts.push(`Conflicting sleep schedules (${normA.sleepSchedule} vs ${normB.sleepSchedule})`);
     }
 
     // 3. Cleanliness (15%)
-    const cleanA = normalize(profileA.cleanliness);
-    const cleanB = normalize(profileB.cleanliness);
+    const cleanA = normalize(normA.cleanliness);
+    const cleanB = normalize(normB.cleanliness);
     if (cleanA === cleanB) {
       score += 15;
       if (cleanA.includes('neat')) alignments.push('Shared preference for a very neat space');
       else if (cleanA.includes('average')) alignments.push('Shared average cleanliness standards');
       else alignments.push('Shared relaxed approach to tidiness');
     } else if ((cleanA.includes('neat') && cleanB.includes('relaxed')) || (cleanA.includes('relaxed') && cleanB.includes('neat'))) {
-      conflicts.push(`Major cleanliness mismatch (${profileA.cleanliness} vs ${profileB.cleanliness})`);
+      conflicts.push(`Major cleanliness mismatch (${normA.cleanliness} vs ${normB.cleanliness})`);
     } else {
       score += 10; // one step difference
-      conflicts.push(`Slight difference in cleanliness standards (${profileA.cleanliness} vs ${profileB.cleanliness})`);
+      conflicts.push(`Slight difference in cleanliness standards (${normA.cleanliness} vs ${normB.cleanliness})`);
     }
 
     // 4. Smoking (15%)
-    const smokeA = normalize(profileA.smoking);
-    const smokeB = normalize(profileB.smoking);
+    const smokeA = normalize(normA.smoking);
+    const smokeB = normalize(normB.smoking);
     if (smokeA === smokeB) {
       score += 15;
       if (smokeA.includes('non-smoker')) alignments.push('Mutual non-smoking household');
       else if (smokeA.includes('outside')) alignments.push('Shared boundary: smoking outside only');
       else alignments.push('Mutual acceptance of smoking');
     } else if ((smokeA === 'non-smoker' && smokeB === 'smoker') || (smokeA === 'smoker' && smokeB === 'non-smoker')) {
-      conflicts.push(`Major lifestyle conflict: ${profileA.smoking} vs ${profileB.smoking}`);
+      conflicts.push(`Major lifestyle conflict: ${normA.smoking} vs ${normB.smoking}`);
     } else {
       score += 5; // e.g., non-smoker vs outside only
-      conflicts.push(`Friction on smoking habits: ${profileA.smoking} vs ${profileB.smoking}`);
+      conflicts.push(`Friction on smoking habits: ${normA.smoking} vs ${normB.smoking}`);
     }
 
     // 5. Guests (10%)
-    const guestsA = normalize(profileA.guests);
-    const guestsB = normalize(profileB.guests);
+    const guestsA = normalize(normA.guests);
+    const guestsB = normalize(normB.guests);
     if (guestsA === guestsB) {
       score += 10;
       if (guestsA.includes('no guests')) alignments.push('Shared preference for no guests');
       else if (guestsA.includes('occasional')) alignments.push('Shared expectation of occasional guests');
       else alignments.push('Shared highly welcoming guest policy');
     } else if ((guestsA.includes('no guests') && guestsB.includes('frequent')) || (guestsA.includes('frequent') && guestsB.includes('no guests'))) {
-      conflicts.push(`Major conflict on guests: ${profileA.guests} vs ${profileB.guests}`);
+      conflicts.push(`Major conflict on guests: ${normA.guests} vs ${normB.guests}`);
     } else {
       score += 5;
-      conflicts.push(`Different guest expectations: ${profileA.guests} vs ${profileB.guests}`);
+      conflicts.push(`Different guest expectations: ${normA.guests} vs ${normB.guests}`);
     }
 
     // 6. Noise Tolerance (10%)
-    const noiseA = normalize(profileA.noiseTolerance);
-    const noiseB = normalize(profileB.noiseTolerance);
+    const noiseA = normalize(normA.noiseTolerance);
+    const noiseB = normalize(normB.noiseTolerance);
     if (noiseA === noiseB) {
       score += 10;
-      alignments.push(`Matched noise tolerance (${profileA.noiseTolerance})`);
+      alignments.push(`Matched noise tolerance (${normA.noiseTolerance})`);
     } else if ((noiseA.includes('low') && noiseB.includes('high')) || (noiseA.includes('high') && noiseB.includes('low'))) {
-      conflicts.push(`Major noise tolerance mismatch: ${profileA.noiseTolerance} vs ${profileB.noiseTolerance}`);
+      conflicts.push(`Major noise tolerance mismatch: ${normA.noiseTolerance} vs ${normB.noiseTolerance}`);
     } else {
       score += 5;
     }
 
     // 7. Pets (5%)
-    const petsA = normalize(profileA.pets);
-    const petsB = normalize(profileB.pets);
+    const petsA = normalize(normA.pets);
+    const petsB = normalize(normB.pets);
     if (petsA === petsB) {
       score += 5;
       if (petsA.includes('no pets')) alignments.push('Shared pet-free preference');
       else if (petsA.includes('has')) alignments.push('Both have pets');
       else alignments.push('Both are pet-friendly');
     } else if ((petsA.includes('has') && petsB.includes('no pets')) || (petsB.includes('has') && petsA.includes('no pets'))) {
-      conflicts.push(`Pet conflict: ${profileA.pets} vs ${profileB.pets}`);
+      conflicts.push(`Pet conflict: ${normA.pets} vs ${normB.pets}`);
     } else {
       score += 5;
       alignments.push('Compatible pet environment');
     }
 
     // 8. Social Preferences (5%)
-    const socialA = normalize(profileA.socialPreferences);
-    const socialB = normalize(profileB.socialPreferences);
+    const socialA = normalize(normA.socialPreferences);
+    const socialB = normalize(normB.socialPreferences);
     if (socialA === socialB) {
       score += 5;
-      alignments.push(`Aligned social energy levels (${profileA.socialPreferences})`);
+      alignments.push(`Aligned social energy levels (${normA.socialPreferences})`);
     } else if ((socialA.includes('very social') && socialB.includes('mostly keep')) || (socialA.includes('mostly keep') && socialB.includes('very social'))) {
-      conflicts.push(`Social mismatch: ${profileA.socialPreferences} vs ${profileB.socialPreferences}`);
+      conflicts.push(`Social mismatch: ${normA.socialPreferences} vs ${normB.socialPreferences}`);
     } else {
       score += 3;
     }
 
     // 9. Work/Study Schedule (5%)
-    const workA = normalize(profileA.workSchedule);
-    const workB = normalize(profileB.workSchedule);
+    const workA = normalize(normA.workSchedule);
+    const workB = normalize(normB.workSchedule);
     if (workA === workB) {
       score += 5;
       alignments.push('Similar daily routines');
     } else if ((workA.includes('shift') && workB.includes('9 to 5')) || (workA.includes('9 to 5') && workB.includes('shift'))) {
-      conflicts.push(`Conflicting daily work schedules (${profileA.workSchedule} vs ${profileB.workSchedule})`);
+      conflicts.push(`Conflicting daily work schedules (${normA.workSchedule} vs ${normB.workSchedule})`);
     } else {
       score += 3;
     }
 
     // 10. Food Preferences (5%)
-    const foodA = normalize(profileA.foodPreferences);
-    const foodB = normalize(profileB.foodPreferences);
+    const foodA = normalize(normA.foodPreferences);
+    const foodB = normalize(normB.foodPreferences);
     if (foodA === foodB) {
       score += 5;
-      alignments.push(`Shared dietary preference (${profileA.foodPreferences})`);
+      alignments.push(`Shared dietary preference (${normA.foodPreferences})`);
     } else if (foodA.includes('no preference') || foodB.includes('no preference')) {
       score += 5;
       alignments.push('Compatible dietary preferences');
     } else if ((foodA.includes('vegan') && foodB.includes('non-veg')) || (foodB.includes('vegan') && foodA.includes('non-veg'))) {
-      conflicts.push(`Different dietary/kitchen habits (${profileA.foodPreferences} vs ${profileB.foodPreferences})`);
+      conflicts.push(`Different dietary/kitchen habits (${normA.foodPreferences} vs ${normB.foodPreferences})`);
     } else if ((foodA.includes('veg') && foodB.includes('non-veg')) || (foodB.includes('veg') && foodA.includes('non-veg'))) {
       score += 2;
-      conflicts.push(`Different dietary/kitchen habits (${profileA.foodPreferences} vs ${profileB.foodPreferences})`);
+      conflicts.push(`Different dietary/kitchen habits (${normA.foodPreferences} vs ${normB.foodPreferences})`);
     } else {
       score += 4;
     }
@@ -219,7 +200,7 @@ export async function POST(req: Request) {
       conflicts,
     };
 
-    const userMessage = buildCompatibilityUserPrompt(profileA, profileB, structuredBreakdown);
+    const userMessage = buildCompatibilityUserPrompt(normA, normB, structuredBreakdown);
 
     let compatibilityResult: RoommateCompatibilityResponse;
     try {

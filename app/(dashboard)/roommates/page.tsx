@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { validateRoommatePair } from '@/lib/validations/roommate';
 
 const preferenceDimensions = [
   { key: 'budget', label: 'Budget (₹/month)', type: 'input', placeholder: '18000' },
@@ -42,7 +43,7 @@ const preferenceDimensions = [
     options: ['Non-smoker', 'Smoker — outside only', 'Smoker'],
   },
   {
-    key: 'food',
+    key: 'foodPreferences',
     label: 'Food preferences',
     type: 'select',
     options: ['Vegetarian', 'Non-vegetarian', 'Vegan', 'No preference'],
@@ -54,7 +55,7 @@ const preferenceDimensions = [
     options: ['No pets', 'Has pet(s)', 'Pet-friendly'],
   },
   {
-    key: 'social',
+    key: 'socialPreferences',
     label: 'Social preferences',
     type: 'select',
     options: ['Very social', 'Friendly but private', 'Mostly keep to myself'],
@@ -69,8 +70,10 @@ const defaultProfileA = {
   noiseTolerance: 'Low — need quiet',
   guests: 'Occasional weekends',
   smoking: 'Non-smoker',
+  foodPreferences: 'Vegetarian',
   food: 'Vegetarian',
   pets: 'No pets',
+  socialPreferences: 'Friendly but private',
   social: 'Friendly but private',
 };
 
@@ -82,8 +85,10 @@ const defaultProfileB = {
   noiseTolerance: 'Medium',
   guests: 'Frequent guests welcome',
   smoking: 'Non-smoker',
+  foodPreferences: 'Non-vegetarian',
   food: 'Non-vegetarian',
   pets: 'No pets',
+  socialPreferences: 'Friendly but private',
   social: 'Friendly but private',
 };
 
@@ -104,24 +109,10 @@ export default function RoommatesPage() {
   const handleEvaluate = async () => {
     setErrorMsg(null);
 
-    const bA = Number(profileA.budget);
-    const bB = Number(profileB.budget);
-
-    if (isNaN(bA) || bA <= 0) {
-      setErrorMsg('Please enter a valid monthly budget for Profile A (greater than ₹0).');
-      return;
-    }
-    if (bA > 10000000) {
-      setErrorMsg('Monthly budget for Profile A cannot exceed ₹1,00,00,000.');
-      return;
-    }
-
-    if (isNaN(bB) || bB <= 0) {
-      setErrorMsg('Please enter a valid monthly budget for Profile B (greater than ₹0).');
-      return;
-    }
-    if (bB > 10000000) {
-      setErrorMsg('Monthly budget for Profile B cannot exceed ₹1,00,00,000.');
+    // Validate both profiles client-side using shared validation rules
+    const validation = validateRoommatePair(profileA, profileB);
+    if (!validation.isValid) {
+      setErrorMsg(validation.error || 'Profiles are incomplete. They must contain all required preferences.');
       return;
     }
 
@@ -132,8 +123,22 @@ export default function RoommatesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profileA: { ...profileA, budget: bA },
-          profileB: { ...profileB, budget: bB },
+          profileA: {
+            ...validation.profileA,
+            // also include common aliases for seamless compatibility
+            workStudySchedule: validation.profileA?.workSchedule,
+            guestPreferences: validation.profileA?.guests,
+            food: validation.profileA?.foodPreferences,
+            social: validation.profileA?.socialPreferences,
+          },
+          profileB: {
+            ...validation.profileB,
+            // also include common aliases for seamless compatibility
+            workStudySchedule: validation.profileB?.workSchedule,
+            guestPreferences: validation.profileB?.guests,
+            food: validation.profileB?.foodPreferences,
+            social: validation.profileB?.socialPreferences,
+          },
         }),
       });
 
@@ -200,14 +205,14 @@ export default function RoommatesPage() {
                   />
                 ) : (
                   <select
-                    value={profileA[dim.key] || dim.options?.[0]}
+                    value={profileA[dim.key] || ''}
                     onChange={(e) =>
                       setProfileA((p) => ({ ...p, [dim.key]: e.target.value }))
                     }
                     className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                   >
                     {dim.options?.map((opt) => (
-                      <option key={opt}>{opt}</option>
+                      <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>
                 )}
@@ -242,14 +247,14 @@ export default function RoommatesPage() {
                   />
                 ) : (
                   <select
-                    value={profileB[dim.key] || dim.options?.[0]}
+                    value={profileB[dim.key] || ''}
                     onChange={(e) =>
                       setProfileB((p) => ({ ...p, [dim.key]: e.target.value }))
                     }
                     className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
                   >
                     {dim.options?.map((opt) => (
-                      <option key={opt}>{opt}</option>
+                      <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>
                 )}
