@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { demoProperties } from '@/lib/demo-data';
 import { getPropertyImage } from '@/lib/property-images';
-import { BookmarkIcon, BookmarkOutlineIcon, StarIcon, SparklesIcon } from '@/components/icons';
+import { BookmarkIcon, BookmarkOutlineIcon } from '@/components/icons';
 import { useUser } from '@/context/UserContext';
 
 const money = (v: number) => `₹${new Intl.NumberFormat('en-IN').format(v)}`;
@@ -230,23 +230,51 @@ export default function RecommendationsPage() {
                 ))}
               </div>
             </div>
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-semibold text-gray-400">
-                ₹
-              </span>
-              <input
-                type="number"
-                min="1000"
-                max="10000000"
-                step="500"
-                value={budget}
-                onChange={(e) => {
-                  setBudget(e.target.value);
+            <div className="flex items-center rounded-lg border border-gray-200 bg-white shadow-sm focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 dark:border-gray-700 dark:bg-gray-800">
+              <button
+                type="button"
+                onClick={() => {
+                  const curr = Number(budget) || 35000;
+                  const next = Math.max(5000, curr - 2500);
+                  setBudget(String(next));
                   if (validationError) setValidationError(null);
                 }}
-                className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-7 pr-3 text-sm font-medium text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
-                placeholder="35000"
-              />
+                className="flex h-9 w-8 items-center justify-center rounded-l-lg text-sm font-bold text-gray-500 transition hover:bg-gray-100 active:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                title="Decrease by ₹2,500"
+              >
+                −
+              </button>
+              <div className="relative flex-1">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2 text-xs font-semibold text-gray-400">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="1000"
+                  max="10000000"
+                  step="500"
+                  value={budget}
+                  onChange={(e) => {
+                    setBudget(e.target.value);
+                    if (validationError) setValidationError(null);
+                  }}
+                  className="h-9 w-full bg-transparent pl-6 pr-2 text-center text-sm font-semibold text-gray-900 focus:outline-none dark:text-gray-100"
+                  placeholder="35000"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const curr = Number(budget) || 35000;
+                  const next = Math.min(500000, curr + 2500);
+                  setBudget(String(next));
+                  if (validationError) setValidationError(null);
+                }}
+                className="flex h-9 w-8 items-center justify-center rounded-r-lg text-sm font-bold text-gray-500 transition hover:bg-gray-100 active:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
+                title="Increase by ₹2,500"
+              >
+                +
+              </button>
             </div>
           </div>
 

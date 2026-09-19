@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useUser } from '@/context/UserContext';
+import BudgetModal from '@/components/budget/BudgetModal';
 import {
   DashboardIcon,
   SearchIcon,
@@ -47,43 +48,11 @@ const navGroups = [
 
 export default function AppSidebar() {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, toggleMobileSidebar } = useSidebar();
-  const { budget, updateBudget, isLoading } = useUser();
+  const { budget, isLoading } = useUser();
   const pathname = usePathname();
-  
-  const [isEditingBudget, setIsEditingBudget] = useState(false);
-  const [editBudgetValue, setEditBudgetValue] = useState(budget.toString());
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
 
   const showFull = isExpanded || isHovered || isMobileOpen;
-
-  useEffect(() => {
-    setEditBudgetValue(budget.toString());
-  }, [budget]);
-
-  useEffect(() => {
-    if (isEditingBudget && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isEditingBudget]);
-
-  const handleBudgetSave = () => {
-    const val = Number(editBudgetValue);
-    if (!isNaN(val) && val > 0 && val <= 1000000) {
-      updateBudget(val);
-    } else {
-      setEditBudgetValue(budget.toString());
-    }
-    setIsEditingBudget(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleBudgetSave();
-    } else if (e.key === 'Escape') {
-      setEditBudgetValue(budget.toString());
-      setIsEditingBudget(false);
-    }
-  };
 
   return (
     <>
@@ -170,57 +139,56 @@ export default function AppSidebar() {
         </nav>
 
         {/* Budget widget */}
-        {showFull && (
-          <div className="border-t border-gray-200 p-4 dark:border-gray-700">
-            <div className="rounded-xl bg-gray-900 p-4 text-white dark:bg-gray-800 transition-colors">
+        <div className="border-t border-gray-200 p-3 dark:border-gray-700">
+          {showFull ? (
+            <div
+              onClick={() => setIsBudgetModalOpen(true)}
+              className="group cursor-pointer rounded-xl bg-gray-900 p-3.5 text-white transition hover:bg-gray-850 hover:ring-1 hover:ring-emerald-500/50 dark:bg-gray-800 dark:hover:bg-gray-750"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setIsBudgetModalOpen(true)}
+            >
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium text-gray-300">Your monthly budget</p>
-                {!isEditingBudget && (
-                  <button 
-                    onClick={() => setIsEditingBudget(true)}
-                    className="text-xs text-gray-400 hover:text-emerald-400 transition"
-                    title="Edit budget"
-                  >
-                    Edit
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <p className="text-[11px] font-medium text-gray-400">Monthly budget</p>
+                </div>
+                <span className="text-[11px] font-semibold text-emerald-400 transition group-hover:underline">
+                  Adjust →
+                </span>
               </div>
-              
+
               <div className="mt-1.5 flex items-baseline">
-                {isEditingBudget ? (
-                  <div className="flex items-center gap-1 w-full relative">
-                    <span className="text-xl font-bold text-emerald-400 absolute left-0">₹</span>
-                    <input
-                      ref={inputRef}
-                      type="number"
-                      value={editBudgetValue}
-                      onChange={(e) => setEditBudgetValue(e.target.value)}
-                      onBlur={handleBudgetSave}
-                      onKeyDown={handleKeyDown}
-                      className="w-full bg-gray-800 border border-gray-600 rounded px-1 pl-4 py-0.5 text-lg font-bold text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                      min="1"
-                      max="1000000"
-                    />
-                  </div>
+                {isLoading ? (
+                  <span className="inline-block h-6 w-20 animate-pulse rounded bg-gray-700"></span>
                 ) : (
-                  <p className="text-xl font-bold cursor-pointer group" onClick={() => setIsEditingBudget(true)}>
-                    {isLoading ? (
-                      <span className="inline-block h-6 w-20 animate-pulse bg-gray-700 rounded"></span>
-                    ) : (
-                      <>
-                        ₹{new Intl.NumberFormat('en-IN').format(budget)}
-                        <span className="text-sm font-medium text-gray-400"> / mo</span>
-                      </>
-                    )}
+                  <p className="text-lg font-bold tracking-tight text-white">
+                    ₹{new Intl.NumberFormat('en-IN').format(budget)}
+                    <span className="text-xs font-normal text-gray-400"> / mo</span>
                   </p>
                 )}
               </div>
-              <p className="mt-2 text-[11px] leading-4 text-gray-400">
-                Costs are compared against this number.
+              <p className="mt-1 text-[10px] text-gray-400">
+                Click to adjust slider, steppers, or presets
               </p>
             </div>
-          </div>
-        )}
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsBudgetModalOpen(true)}
+              className="flex h-10 w-full items-center justify-center rounded-xl bg-gray-900 text-xs font-bold text-emerald-400 shadow-sm transition hover:bg-gray-800 hover:ring-1 hover:ring-emerald-500/50 dark:bg-gray-800 dark:hover:bg-gray-750"
+              title={`Monthly budget: ₹${new Intl.NumberFormat('en-IN').format(budget)} / mo (Click to adjust)`}
+            >
+              ₹
+            </button>
+          )}
+        </div>
+
+        {/* Budget Modal */}
+        <BudgetModal
+          isOpen={isBudgetModalOpen}
+          onClose={() => setIsBudgetModalOpen(false)}
+        />
       </aside>
     </>
   );
