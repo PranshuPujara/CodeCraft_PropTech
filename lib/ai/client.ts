@@ -6,13 +6,28 @@ import Groq from 'groq-sdk';
  * Single source of truth for all LLM calls.
  */
 
-const apiKey = process.env.GROQ_API_KEY || 'mock-api-key';
+let cachedGroq: Groq | null = null;
+let lastApiKey: string | undefined = undefined;
 
-export const groq = new Groq({
-  apiKey: apiKey,
+export function getGroqClient(): Groq {
+  const currentKey = process.env.GROQ_API_KEY || 'mock-api-key';
+  if (!cachedGroq || lastApiKey !== currentKey) {
+    cachedGroq = new Groq({ apiKey: currentKey });
+    lastApiKey = currentKey;
+  }
+  return cachedGroq;
+}
+
+export const groq = new Proxy({} as Groq, {
+  get(_target, prop) {
+    const client = getGroqClient();
+    const val = (client as any)[prop];
+    return typeof val === 'function' ? val.bind(client) : val;
+  },
 });
 
-export const DEFAULT_MODEL = process.env.GROQ_MODEL || 'llama-3.1-70b-versatile';
+export const DEFAULT_MODEL = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+const FALLBACK_MODELS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
 
 export interface AICompletionOptions {
   model?: string;
@@ -26,26 +41,37 @@ export interface AICompletionOptions {
  * Executes a completion request with Groq API.
  */
 export async function completeText(options: AICompletionOptions): Promise<string> {
-  const model = options.model || DEFAULT_MODEL;
-  const maxTokens = options.maxTokens || 1500;
+  const primaryModel = options.model || DEFAULT_MODEL;
+  const modelsToTry = [primaryModel, ...FALLBACK_MODELS].filter(
+    (m, i, arr) => arr.indexOf(m) === i
+  );
+  const maxTokens = options.maxTokens || 3000;
   const temperature = options.temperature ?? 0.2;
 
-  try {
-    const response = await groq.chat.completions.create({
-      model,
-      max_tokens: maxTokens,
-      temperature,
-      messages: [
-        { role: 'system', content: options.systemPrompt },
-        { role: 'user', content: options.userMessage }
-      ],
-    });
+  let lastError: any = null;
 
-    return response.choices[0]?.message?.content || '';
-  } catch (error) {
-    console.error('Error in AI completeText:', error);
-    throw error;
+  for (const model of modelsToTry) {
+    try {
+      const client = getGroqClient();
+      const response = await client.chat.completions.create({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        messages: [
+          { role: 'system', content: options.systemPrompt },
+          { role: 'user', content: options.userMessage }
+        ],
+      });
+
+      return response.choices[0]?.message?.content || '';
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`Groq completeText with model ${model} failed, trying fallback:`, error?.message || error);
+    }
   }
+
+  console.error('Error in AI completeText:', lastError);
+  throw lastError;
 }
 
 /**
@@ -57,34 +83,45 @@ export async function completeStructuredJSON<T>(
 ): Promise<T> {
   const jsonSystemPrompt = `${options.systemPrompt}\n\nIMPORTANT: You MUST respond ONLY with valid JSON matching the requested structure. Do not include markdown code block backticks (e.g. \`\`\`json) or any conversational text before/after the JSON string.`;
 
-  const model = options.model || DEFAULT_MODEL;
-  const maxTokens = options.maxTokens || 1500;
+  const primaryModel = options.model || DEFAULT_MODEL;
+  const modelsToTry = [primaryModel, ...FALLBACK_MODELS].filter(
+    (m, i, arr) => arr.indexOf(m) === i
+  );
+  const maxTokens = options.maxTokens || 3000;
   const temperature = options.temperature ?? 0.2;
 
-  try {
-    const response = await groq.chat.completions.create({
-      model,
-      max_tokens: maxTokens,
-      temperature,
-      messages: [
-        { role: 'system', content: jsonSystemPrompt },
-        { role: 'user', content: options.userMessage }
-      ],
-      response_format: { type: 'json_object' }
-    });
+  let lastError: any = null;
 
-    const rawText = response.choices[0]?.message?.content || '';
+  for (const model of modelsToTry) {
+    try {
+      const client = getGroqClient();
+      const response = await client.chat.completions.create({
+        model,
+        max_tokens: maxTokens,
+        temperature,
+        messages: [
+          { role: 'system', content: jsonSystemPrompt },
+          { role: 'user', content: options.userMessage }
+        ],
+        response_format: { type: 'json_object' }
+      });
 
-    // Clean codeblock formatting if the LLM outputted ```json ... ```
-    const cleanedText = rawText
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
+      const rawText = response.choices[0]?.message?.content || '';
 
-    return JSON.parse(cleanedText) as T;
-  } catch (err: any) {
-    console.error('Failed to parse AI structured JSON output:', err);
-    throw new Error(`AI JSON parse failure: ${(err as Error).message}`);
+      // Clean codeblock formatting if the LLM outputted ```json ... ```
+      const cleanedText = rawText
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      return JSON.parse(cleanedText) as T;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`Groq completeStructuredJSON with model ${model} failed, trying fallback:`, err?.message || err);
+    }
   }
+
+  console.error('Failed to parse AI structured JSON output:', lastError);
+  throw new Error(`AI JSON parse failure: ${(lastError as Error)?.message || 'Unknown error'}`);
 }

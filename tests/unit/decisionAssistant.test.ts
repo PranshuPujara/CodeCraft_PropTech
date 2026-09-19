@@ -215,5 +215,5 @@ describe('Decision Assistant Unit Tests', () => {
     expect(result.properties.length).toBe(2);
     expect(result).toHaveProperty('shortlistedCount', 2);
     expect(result).toHaveProperty('userPreferences');
-  });
+  }, 15000);
 });

@@ -41,13 +41,13 @@ export default function AgreementsPage() {
       return;
     }
 
-    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
     if (file.size <= 0) {
       setUploadError('The selected file is empty. Please choose a valid PDF.');
       return;
     }
     if (file.size > MAX_SIZE) {
-      setUploadError('File size exceeds 10MB limit. Please choose a smaller file.');
+      setUploadError('File size exceeds 5MB limit. Please choose a smaller file.');
       return;
     }
 

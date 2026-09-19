@@ -18,7 +18,7 @@ import { COPILOT_SYSTEM_PROMPT } from '../../lib/ai/prompts/copilot';
 describe('Shared AI Foundation (lib/ai)', () => {
   it('exports single Groq client instance and default model', () => {
     expect(groq).toBeDefined();
-    expect(DEFAULT_MODEL).toBe('llama-3.1-70b-versatile');
+    expect(DEFAULT_MODEL).toBe('openai/gpt-oss-120b');
   });
 
   it('contains mandatory legal advice guardrail disclaimer', () => {

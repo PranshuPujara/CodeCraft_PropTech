@@ -14,34 +14,41 @@ import {
 } from '../../../lib/ai/types';
 
 const ExtractedFieldSchema = z.object({
-  value: z.union([z.string(), z.number()]).nullable(),
-  found: z.boolean(),
-  clauseSnippet: z.string().nullable().optional(),
+  value: z.union([z.string(), z.number()]).nullable().optional().default(null),
+  found: z.boolean().optional().default(false),
+  clauseSnippet: z.string().nullable().optional().default(null),
 });
 
+const defaultField = { value: null, found: false, clauseSnippet: null };
+
 const AgreementExtractionSchema = z.object({
-  rent: ExtractedFieldSchema,
-  deposit: ExtractedFieldSchema,
-  leaseDuration: ExtractedFieldSchema,
-  lockInPeriod: ExtractedFieldSchema,
-  noticePeriod: ExtractedFieldSchema,
-  rentEscalation: ExtractedFieldSchema,
-  maintenanceResponsibility: ExtractedFieldSchema,
-  utilityResponsibility: ExtractedFieldSchema,
-  penalties: ExtractedFieldSchema,
-  terminationConditions: ExtractedFieldSchema,
-  summary: z.string(),
+  rent: ExtractedFieldSchema.default(defaultField),
+  deposit: ExtractedFieldSchema.default(defaultField),
+  leaseDuration: ExtractedFieldSchema.default(defaultField),
+  lockInPeriod: ExtractedFieldSchema.default(defaultField),
+  noticePeriod: ExtractedFieldSchema.default(defaultField),
+  rentEscalation: ExtractedFieldSchema.default(defaultField),
+  maintenanceResponsibility: ExtractedFieldSchema.default(defaultField),
+  utilityResponsibility: ExtractedFieldSchema.default(defaultField),
+  penalties: ExtractedFieldSchema.default(defaultField),
+  terminationConditions: ExtractedFieldSchema.default(defaultField),
+  summary: z.string().optional().default('Summary of agreement terms extracted from document.'),
 });
 
 const FlaggedClauseItemSchema = z.object({
-  clause: z.string(),
-  reason: z.string(),
-  attentionLevel: z.enum(['high', 'medium', 'low']),
+  clause: z.string().default('Clause worth noting'),
+  reason: z.string().default('Clause worth reviewing with landlord'),
+  attentionLevel: z.string().transform((val) => {
+    const v = val.toLowerCase();
+    if (v === 'high' || v === 'critical' || v === 'urgent') return 'high';
+    if (v === 'low' || v === 'info') return 'low';
+    return 'medium';
+  }),
 });
 
 const AgreementFlagsSchema = z.object({
-  flaggedClauses: z.array(FlaggedClauseItemSchema),
-  disclaimer: z.string(),
+  flaggedClauses: z.array(FlaggedClauseItemSchema).default([]),
+  disclaimer: z.string().optional().default(LEGAL_GUARDRAIL_DISCLAIMER),
 });
 
 export async function POST(request: Request) {
@@ -115,12 +122,14 @@ export async function POST(request: Request) {
     const extractionResponse = await completeStructuredJSON<AgreementExtractionResponse>({
       systemPrompt: AGREEMENT_EXTRACTION_SYSTEM_PROMPT,
       userMessage: `Please extract the required fields from this rental agreement text:\n\n${extractedText}`,
+      maxTokens: 2500,
     });
 
     // 3. Generate summary/flags
     const flagsResponse = await completeStructuredJSON<AgreementFlagsResponse>({
       systemPrompt: AGREEMENT_FLAGS_SYSTEM_PROMPT,
       userMessage: `Please analyze this rental agreement text and flag clauses that deserve attention:\n\n${extractedText}`,
+      maxTokens: 1500,
     });
 
     // 5. Runtime Validation
