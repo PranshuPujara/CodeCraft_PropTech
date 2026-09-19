@@ -2,15 +2,16 @@
 
 import { useSidebar } from '@/context/SidebarContext';
 import { useTheme } from '@/context/ThemeContext';
-import { MenuIcon, CloseIcon, SunIcon, MoonIcon, SearchIcon } from '@/components/icons';
+import { MenuIcon, CloseIcon, SunIcon, MoonIcon } from '@/components/icons';
+import CommandSearch from '@/components/search/CommandSearch';
 
 export default function AppHeader() {
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-900 sm:px-6">
-      {/* Left — hamburger + breadcrumb */}
+    <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white/80 px-4 backdrop-blur-md dark:border-gray-700 dark:bg-gray-900/80 sm:px-6">
+      {/* Left — hamburger + search */}
       <div className="flex items-center gap-3">
         {/* Mobile hamburger */}
         <button
@@ -36,15 +37,8 @@ export default function AppHeader() {
           Rentwise
         </span>
 
-        {/* Search (desktop) */}
-        <div className="relative hidden xl:block">
-          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search properties, locations..."
-            className="h-10 w-72 rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 text-sm text-gray-700 outline-none transition-colors placeholder:text-gray-400 focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-500 dark:focus:border-emerald-600 dark:focus:ring-emerald-900/30"
-          />
-        </div>
+        {/* Command Palette Search */}
+        <CommandSearch />
       </div>
 
       {/* Right — actions */}
