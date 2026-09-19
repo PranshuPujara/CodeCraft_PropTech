@@ -229,10 +229,10 @@ function AssistantContent() {
               Decision Assistant
             </p>
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
             Your shortlist, evaluated against your priorities.
           </h1>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
             {data.propertyCount} properties · Budget {money(budget)}/mo
             {data.evaluatedAgainst.bedrooms ? ` · ${data.evaluatedAgainst.bedrooms} BHK` : ''}
             {data.evaluatedAgainst.furnishing ? ` · ${data.evaluatedAgainst.furnishing}` : ''}
@@ -267,7 +267,7 @@ function AssistantContent() {
               Budget Alignment
             </span>
             <div className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-xl font-black text-gray-900 dark:text-white">
+              <span className="text-xl font-black text-tabular text-gray-900 dark:text-white">
                 {withinBudgetProps.length} of {data.properties.length}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400">within budget</span>
@@ -285,7 +285,7 @@ function AssistantContent() {
               Monthly Cost Range
             </span>
             <div className="mt-1">
-              <span className="text-xl font-black text-emerald-800 dark:text-emerald-300">
+              <span className="text-xl font-black text-tabular text-emerald-800 dark:text-emerald-300">
                 {formatCompact(minMonthly)} — {formatCompact(maxMonthly)}
               </span>
               <span className="text-xs text-gray-500"> / mo</span>
@@ -301,7 +301,7 @@ function AssistantContent() {
               Upfront Move-In Range
             </span>
             <div className="mt-1">
-              <span className="text-xl font-black text-gray-900 dark:text-white">
+              <span className="text-xl font-black text-tabular text-gray-900 dark:text-white">
                 {formatCompact(minMoveIn)} — {formatCompact(maxMoveIn)}
               </span>
             </div>
@@ -314,7 +314,7 @@ function AssistantContent() {
         {/* Concise AI Insight Banner (1-2 sentences) */}
         <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-white/80 p-3 text-xs leading-5 text-gray-700 shadow-sm dark:bg-gray-800/60 dark:text-gray-300">
           <span className="font-bold text-emerald-600 dark:text-emerald-400">💡 AI Insight:</span>
-          <span>{conciseInsight}</span>
+          <span className="text-sm leading-relaxed">{conciseInsight}</span>
         </div>
       </Card>
 
@@ -371,7 +371,7 @@ function AssistantContent() {
             <div className="mt-1 text-sm font-black text-gray-900 dark:text-white">
               {formatCompact(minMonthly)} ↔ {formatCompact(maxMonthly)}
             </div>
-            <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">
+            <p className="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
               Lower monthly overhead vs larger floor plan and exact requirement match.
             </p>
           </Card>
@@ -384,7 +384,7 @@ function AssistantContent() {
             <div className="mt-1 text-sm font-black text-gray-900 dark:text-white">
               {formatCompact(minMoveIn)} ↔ {formatCompact(maxMoveIn)}
             </div>
-            <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">
+            <p className="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
               {formatCompact(maxMoveIn - minMoveIn)} variance in move-in liquidity before signing.
             </p>
           </Card>
@@ -397,7 +397,7 @@ function AssistantContent() {
             <div className="mt-1 text-sm font-black text-gray-900 dark:text-white">
               Furnishing ↔ Rent Premium
             </div>
-            <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-gray-300">
+            <p className="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
               {data.keyTradeoffs?.[0] || 'Fully furnished move-in ready convenience commands higher base rent.'}
             </p>
           </Card>
@@ -466,21 +466,21 @@ function AssistantContent() {
                   <div className="grid grid-cols-3 gap-1 text-center">
                     <div>
                       <span className="text-[10px] uppercase tracking-wider text-gray-400">Listed Rent</span>
-                      <p className="text-xs font-bold text-gray-900 dark:text-white">{money(rent)}</p>
+                      <p className="text-xs font-bold text-tabular text-gray-900 dark:text-white">{money(rent)}</p>
                     </div>
 
                     <div className="border-x border-gray-200 dark:border-gray-700">
                       <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-800 dark:text-emerald-300">
                         True Monthly
                       </span>
-                      <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      <p className="text-xs font-bold text-tabular text-emerald-800 dark:text-emerald-300">
                         ≈ {money(trueMonthly)}
                       </p>
                     </div>
 
                     <div>
                       <span className="text-[10px] uppercase tracking-wider text-gray-400">Move-in Cash</span>
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">{money(moveIn)}</p>
+                      <p className="text-xs font-bold text-tabular text-gray-700 dark:text-gray-300">{money(moveIn)}</p>
                     </div>
                   </div>
 

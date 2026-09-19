@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
 import { demoProperties } from '@/lib/demo-data';
 import { HomeIcon, BookmarkIcon, BookmarkOutlineIcon, FilterIcon, SearchIcon } from '@/components/icons';
 
@@ -141,10 +141,10 @@ export default function DiscoverPage() {
         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
           Property discovery
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
           Find options you can actually evaluate.
         </h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
           Every listing includes its estimated monthly total and move-in cost.
         </p>
       </div>
@@ -239,7 +239,7 @@ export default function DiscoverPage() {
               {/* Content */}
               <div className="flex flex-1 flex-col p-4">
                 {/* Title */}
-                <h3 className="font-bold text-gray-900 line-clamp-2 dark:text-white">
+                <h3 className="text-[15px] font-semibold text-gray-900 line-clamp-2 dark:text-white">
                   {property.title}
                 </h3>
                 
@@ -250,11 +250,11 @@ export default function DiscoverPage() {
 
                 {/* Financial Summary */}
                 <div className="mt-4">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <p className="text-sm font-semibold text-tabular text-gray-900 dark:text-white">
                     {money(property.rent)} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">/ month rent</span>
                   </p>
                   {/* Preserved financial intelligence visually simplified */}
-                  <div className="mt-1 flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+                  <div className="mt-1 flex items-center gap-3 text-[11px] text-tabular text-gray-500 dark:text-gray-400">
                     <span className="text-emerald-700 dark:text-emerald-400">True Monthly: ≈{money(monthlyEst)}</span>
                     <span className="text-gray-300 dark:text-gray-600">|</span>
                     <span>Move-in: {money(moveInEst)}</span>
@@ -263,22 +263,22 @@ export default function DiscoverPage() {
 
                 {/* Badges and Amenities grouped together */}
                 <div className="mt-4 flex flex-wrap gap-1.5">
-                  <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+                  <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
                     {property.furnishing}
                   </span>
-                  <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+                  <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
                     {property.bedrooms} BHK
                   </span>
                   {Array.isArray(property.amenities) && property.amenities.slice(0, 3).map((a) => (
                     <span
                       key={a}
-                      className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                      className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
                     >
                       {a}
                     </span>
                   ))}
                   {Array.isArray(property.amenities) && property.amenities.length > 3 && (
-                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                       +{property.amenities.length - 3}
                     </span>
                   )}

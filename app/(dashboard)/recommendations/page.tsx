@@ -125,23 +125,23 @@ export default function RecommendationsPage() {
         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
           Personalized recommendations
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
           Properties that match your needs.
         </h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
           Every recommendation is ranked by the backend engine with an explicit explanation.
         </p>
       </div>
 
       {/* Preference inputs */}
       <Card className="p-5 sm:p-6">
-        <h2 className="font-semibold text-gray-900 dark:text-white">Your preferences</h2>
+        <h2 className="text-base font-semibold text-gray-900 dark:text-white">Your preferences</h2>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Adjust preferences to recalculate personalized matches.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+            <label className="mb-1 block text-[13px] font-medium text-gray-500 dark:text-gray-400">
               Monthly budget (₹)
             </label>
             <input
@@ -159,7 +159,7 @@ export default function RecommendationsPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+            <label className="mb-1 block text-[13px] font-medium text-gray-500 dark:text-gray-400">
               Bedrooms
             </label>
             <select
@@ -174,7 +174,7 @@ export default function RecommendationsPage() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+            <label className="mb-1 block text-[13px] font-medium text-gray-500 dark:text-gray-400">
               Furnishing
             </label>
             <select
@@ -264,7 +264,7 @@ export default function RecommendationsPage() {
                 </div>
 
                 <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg font-bold text-tabular text-gray-900 dark:text-white">
                     ≈ {money(monthlyEst)}
                     <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
                       {' '}
@@ -277,10 +277,10 @@ export default function RecommendationsPage() {
 
               {/* Binding Rule: Score/Recommendation MUST have explicit explanation next to it */}
               <div className="mt-4 rounded-xl bg-emerald-50/60 p-3.5 dark:bg-emerald-950/20">
-                <p className="text-xs font-semibold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                <p className="text-overline">
                   Why this matches your criteria
                 </p>
-                <p className="mt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                <p className="mt-1 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
                   {reason}
                 </p>
               </div>

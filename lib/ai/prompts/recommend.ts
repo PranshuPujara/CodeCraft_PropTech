@@ -4,7 +4,7 @@
  * Teammate 2 Track
  */
 
-import { completeStructuredJSON } from '../client';
+
 import { RecommendationResponse, RecommendedPropertyItem } from '../types';
 
 export const RECOMMENDATION_SYSTEM_PROMPT = `

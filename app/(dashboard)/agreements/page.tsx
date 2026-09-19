@@ -99,10 +99,10 @@ export default function AgreementsPage() {
         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
           Agreement intelligence
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
           Understand what your agreement states.
         </h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
           Upload a rental agreement PDF to extract key terms and flag items worth your attention.
         </p>
       </div>
@@ -132,7 +132,7 @@ export default function AgreementsPage() {
           className="cursor-pointer flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 py-12 text-center transition hover:border-emerald-300 hover:bg-emerald-50/30 dark:border-gray-700 dark:bg-gray-800/30 dark:hover:border-emerald-700"
         >
           <UploadIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-          <p className="mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <p className="mt-3 text-[15px] font-medium text-gray-700 dark:text-gray-300">
             {isUploading ? 'Extracting & analyzing agreement clauses...' : 'Drag & drop your agreement PDF here'}
           </p>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -173,10 +173,10 @@ export default function AgreementsPage() {
       {/* Summary */}
       {agreement?.summary && (
         <Card className="p-5 sm:p-6">
-          <h2 className="font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
             Plain-language summary
           </h2>
-          <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-400">
+          <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
             {agreement.summary}
           </p>
         </Card>
@@ -186,7 +186,7 @@ export default function AgreementsPage() {
       {flaggedClauses && flaggedClauses.length > 0 && (
         <Card className="p-5 sm:p-6">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
               Worth your attention
             </h2>
             <Badge tone="amber">{flaggedClauses.length} items flagged</Badge>
@@ -209,7 +209,7 @@ export default function AgreementsPage() {
                     {flag.clause}
                   </p>
                 </div>
-                <p className="mt-2 text-xs leading-5 text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
                   {flag.reason}
                 </p>
               </div>
@@ -221,7 +221,7 @@ export default function AgreementsPage() {
       {/* Extracted key fields */}
       <Card className="overflow-hidden">
         <div className="border-b border-gray-200 bg-gray-50 px-5 py-3 dark:border-gray-700 dark:bg-gray-800/50">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-[13px] font-semibold text-gray-900 dark:text-white">
             Extracted agreement terms (10 Core Dimensions)
           </h2>
         </div>

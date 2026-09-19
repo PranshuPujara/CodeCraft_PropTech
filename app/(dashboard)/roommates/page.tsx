@@ -170,10 +170,10 @@ export default function RoommatesPage() {
         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
           Roommate compatibility
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
           Practical fit, explained clearly.
         </h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
           Evaluates lifestyle friction points and alignments across 10 concrete dimensions.
         </p>
       </div>
@@ -181,13 +181,13 @@ export default function RoommatesPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Profile A */}
         <Card className="p-5 sm:p-6">
-          <h2 className="mb-4 font-semibold text-gray-900 dark:text-white">
+          <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
             Your preferences (Profile A)
           </h2>
           <div className="space-y-3">
             {preferenceDimensions.map((dim) => (
               <div key={dim.key}>
-                <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                <label className="mb-1 block text-[13px] font-medium text-gray-500 dark:text-gray-400">
                   {dim.label}
                 </label>
                 {dim.type === 'input' ? (
@@ -223,13 +223,13 @@ export default function RoommatesPage() {
 
         {/* Profile B */}
         <Card className="p-5 sm:p-6">
-          <h2 className="mb-4 font-semibold text-gray-900 dark:text-white">
+          <h2 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">
             Potential roommate (Profile B)
           </h2>
           <div className="space-y-3">
             {preferenceDimensions.map((dim) => (
               <div key={dim.key}>
-                <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+                <label className="mb-1 block text-[13px] font-medium text-gray-500 dark:text-gray-400">
                   {dim.label}
                 </label>
                 {dim.type === 'input' ? (
@@ -282,7 +282,7 @@ export default function RoommatesPage() {
       {/* Compatibility Result */}
       {result && (
         <Card className="p-5 sm:p-6 border-emerald-200 dark:border-emerald-800/40">
-          <h2 className="font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-white">
             Compatibility evaluation
           </h2>
 
@@ -299,10 +299,10 @@ export default function RoommatesPage() {
 
             {/* Hard rule: The score is NEVER rendered without its explanation next to it */}
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+               <span className="text-overline">
                 Narrative Analysis
-              </p>
-              <p className="mt-1 text-sm leading-6 text-gray-700 dark:text-gray-300">
+              </span>
+              <p className="mt-1 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
                 {result.explanation}
               </p>
             </div>

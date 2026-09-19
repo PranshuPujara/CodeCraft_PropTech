@@ -76,6 +76,16 @@
   .menu-item-icon {
     @apply flex h-5 w-5 items-center justify-center;
   }
+
+  /* Tabular numbers for financial figures */
+  .text-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Section overline label */
+  .text-overline {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400 dark:text-gray-500;
+  }
 }
 
 @layer utilities {

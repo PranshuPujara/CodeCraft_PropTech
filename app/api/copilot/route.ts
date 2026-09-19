@@ -6,7 +6,7 @@ import {
   loadUserCopilotContext,
   generateDeterministicGroundedResponse,
 } from '../../../lib/ai/copilotContext';
-import { CopilotResponse } from '../../../lib/ai/types';
+
 
 export const dynamic = 'force-dynamic';
 

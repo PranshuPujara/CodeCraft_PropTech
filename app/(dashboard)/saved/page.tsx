@@ -134,10 +134,10 @@ export default function SavedPage() {
               Saved & Shortlisted Homes
             </p>
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
             Decision Shortlist & Bookmarks
           </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
             Curate shortlisted properties to weigh true monthly costs, analyze trade-offs, and run AI Decision Support.
           </p>
         </div>
@@ -394,7 +394,7 @@ function PropertyCard({
       {/* Card Body */}
       <div className="flex flex-1 flex-col p-4">
         {/* Title */}
-        <h3 className="font-bold line-clamp-2 text-gray-900 dark:text-white">
+        <h3 className="text-[15px] font-semibold line-clamp-2 text-gray-900 dark:text-white">
           {p.title}
         </h3>
 
@@ -406,11 +406,11 @@ function PropertyCard({
 
         {/* Financial Summary */}
         <div className="mt-4">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+          <p className="text-sm font-semibold text-tabular text-gray-900 dark:text-white">
             {money(p.rent)} <span className="text-xs font-normal text-gray-500 dark:text-gray-400">/ month rent</span>
           </p>
           {/* Preserved financial intelligence visually simplified */}
-          <div className="mt-1 flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+          <div className="mt-1 flex items-center gap-3 text-[11px] text-tabular text-gray-500 dark:text-gray-400">
             <span className="text-emerald-700 dark:text-emerald-400">True Monthly: ≈{money(monthlyCost)}</span>
             <span className="text-gray-300 dark:text-gray-600">|</span>
             <span>Move-in: {money(moveInCost)}</span>
@@ -419,22 +419,22 @@ function PropertyCard({
 
         {/* Badges and Amenities grouped together */}
         <div className="mt-4 flex flex-wrap gap-1.5">
-          <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+          <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
             {p.furnishing}
           </span>
-          <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
+          <span className="rounded-md bg-blue-50 text-blue-700 px-2 py-0.5 text-[11px] font-medium border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800/50">
             {p.bedrooms} BHK
           </span>
           {amenitiesList.slice(0, 3).map((a) => (
             <span
               key={a}
-              className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+              className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
             >
               {a}
             </span>
           ))}
           {amenitiesList.length > 3 && (
-            <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
               +{amenitiesList.length - 3}
             </span>
           )}
@@ -521,11 +521,11 @@ function PropertyDenseRow({
 
       <div className="flex flex-wrap items-center gap-4 sm:gap-6">
         <div className="text-right">
-          <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+          <p className="text-sm font-bold text-tabular text-emerald-800 dark:text-emerald-300">
             ≈ {money(monthlyCost)}
             <span className="text-xs font-normal text-gray-400"> / mo</span>
           </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="text-[11px] text-tabular text-gray-500 dark:text-gray-400">
             Rent: {money(p.rent)} · Move-in: {money(moveInCost)}
           </p>
         </div>

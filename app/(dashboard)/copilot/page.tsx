@@ -162,7 +162,7 @@ export default function CopilotPage() {
               AI Rental Copilot
             </h1>
           </div>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
             Grounded strictly in your financial profile, verified properties, itemized costs, and lease agreements.
           </p>
         </div>
@@ -175,7 +175,7 @@ export default function CopilotPage() {
 
       {/* Suggested Quick Prompts */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+        <span className="text-overline">
           Core Questions:
         </span>
         {suggestedPrompts.map((p) => (
@@ -215,7 +215,7 @@ export default function CopilotPage() {
               </div>
 
               <div
-                className={`mt-1.5 max-w-3xl rounded-2xl p-4 text-sm leading-6 ${
+                className={`mt-1.5 max-w-3xl rounded-2xl p-4 text-[13px] leading-relaxed ${
                   m.role === 'user'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-gray-50 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700'
@@ -233,7 +233,7 @@ export default function CopilotPage() {
                 {/* ContextRefs Pills */}
                 {m.contextRefs && m.contextRefs.length > 0 && (
                   <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-gray-200/60 pt-2 text-[11px] text-gray-500 dark:border-gray-700/60 dark:text-gray-400">
-                    <span className="font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    <span className="text-overline">
                       ContextRefs:
                     </span>
                     {m.contextRefs.map((ref, idx) => {

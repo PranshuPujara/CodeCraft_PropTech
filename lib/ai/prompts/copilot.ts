@@ -4,7 +4,7 @@
  */
 
 import { UserCopilotContext } from '../copilotContext';
-import { LEGAL_GUARDRAIL_DISCLAIMER } from '../types';
+import { LEGAL_GUARDRAIL_DISCLAIMER, CopilotResponse } from '../types';
 
 export const COPILOT_SYSTEM_PROMPT = `
 You are the AI Rental Copilot.
@@ -111,7 +111,7 @@ export async function generateCopilotResponse(
       return {
         answer: result.answer,
         contextRefs: Array.isArray(result.contextRefs) ? result.contextRefs : [],
-        missingDataNotice: result.missingDataNotice || null,
+        missingDataNotice: result.missingDataNotice || undefined,
       };
     }
     throw new Error('Empty AI response from Groq');

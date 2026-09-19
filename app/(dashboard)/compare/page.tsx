@@ -200,10 +200,10 @@ function CompareContent() {
         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
           Property comparison
         </p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
           See the trade-offs, not just the columns.
         </h1>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
           Comparing {properties.length} options against your ₹35,000 monthly budget.
         </p>
       </div>
@@ -242,7 +242,7 @@ function CompareContent() {
                     {row.label}
                   </td>
                   {row.values.map((v, i) => (
-                    <td key={i} className="px-5 py-3.5 text-gray-900 dark:text-gray-100">
+                    <td key={i} className="px-5 py-3.5 text-tabular text-gray-900 dark:text-gray-100">
                       {v}
                     </td>
                   ))}
@@ -257,7 +257,7 @@ function CompareContent() {
       {tradeoffs.length > 0 && (
         <div className="space-y-3">
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
               Structured Trade-off Insights
             </h2>
             {summary && (
@@ -275,7 +275,7 @@ function CompareContent() {
                     <Badge tone="blue">{t.dimension}</Badge>
                     <span className="text-[11px] text-gray-400">Pairwise Trade-off</span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                  <p className="mt-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
                     {text}
                   </p>
                 </Card>

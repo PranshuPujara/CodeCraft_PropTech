@@ -80,10 +80,10 @@ export default function DashboardOverview() {
           <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
             Welcome to Rentwise
           </p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
             Make your next rental decision clearer.
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-gray-500 dark:text-gray-400">
             Compare true recurring monthly expenses, inspect lease clauses, and find compatible roommates.
           </p>
         </div>
@@ -243,7 +243,7 @@ export default function DashboardOverview() {
             />
             <div className="flex items-center justify-between border-t border-gray-200 pt-2 text-sm font-bold text-gray-900 dark:border-gray-700 dark:text-white">
               <span>True monthly commitment</span>
-              <span className="text-emerald-600 dark:text-emerald-400">
+              <span className="text-tabular text-emerald-600 dark:text-emerald-400">
                 ≈ {money(monthlyEst)} / mo
               </span>
             </div>
@@ -253,7 +253,7 @@ export default function DashboardOverview() {
 
       {/* Decision Workspace Quick Links */}
       <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+        <h2 className="mb-3 text-overline">
           Decision Intelligence Tools
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -313,7 +313,7 @@ function MetricCard({
         <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
         <span className={`h-2 w-2 rounded-full ${dotColor}`} />
       </div>
-      <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+      <p className="mt-1 text-2xl font-extrabold tracking-tight text-tabular text-gray-900 dark:text-white">
         {value}
       </p>
       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{detail}</p>
@@ -337,7 +337,7 @@ function CostRow({
         <p className="font-medium text-gray-700 dark:text-gray-300">{label}</p>
         <p className="text-[11px] text-gray-400">{sub}</p>
       </div>
-      <p className="font-semibold text-gray-900 dark:text-white">{amount}</p>
+      <p className="text-tabular font-semibold text-gray-900 dark:text-white">{amount}</p>
     </div>
   );
 }
